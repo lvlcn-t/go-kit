@@ -612,7 +612,7 @@ func TestOperations_IsSorted(t *testing.T) {
 	}
 }
 
-func TestOperations_AllMatch(t *testing.T) {
+func TestOperations_AllMatch(t *testing.T) { //nolint:dupl // generic functions cannot be stored in variables
 	tests := []struct {
 		name  string
 		slice []int
@@ -654,7 +654,7 @@ func TestOperations_AllMatch(t *testing.T) {
 	}
 }
 
-func TestOperations_AnyMatch(t *testing.T) {
+func TestOperations_AnyMatch(t *testing.T) { //nolint:dupl // generic functions cannot be stored in variables
 	tests := []struct {
 		name  string
 		slice []int
@@ -696,7 +696,7 @@ func TestOperations_AnyMatch(t *testing.T) {
 	}
 }
 
-func TestOperations_NoneMatch(t *testing.T) {
+func TestOperations_NoneMatch(t *testing.T) { //nolint:dupl // generic functions cannot be stored in variables
 	tests := []struct {
 		name  string
 		slice []int

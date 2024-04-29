@@ -92,7 +92,7 @@ func Distinct[T comparable](slice []T) []T {
 //	Partition([]int{1, 2, 3, 4}, func(i int) bool {
 //		return i%2 == 0
 //	}) // Output: []int{2, 4}, []int{1, 3}
-func Partition[T any](slice []T, f Predicate[T]) ([]T, []T) {
+func Partition[T any](slice []T, f Predicate[T]) (trueS, falseS []T) {
 	trueSlice := make([]T, 0, len(slice))
 	falseSlice := make([]T, 0, len(slice))
 	for _, v := range slice {
@@ -167,7 +167,7 @@ func Combinations[T any](slice []T, n int) [][]T {
 //	Shuffle([]int{1, 2, 3, 4}) // Output: []int{3, 1, 4, 2}
 func Shuffle[T any](slice []T) []T {
 	result := make([]T, len(slice))
-	perm := rand.New(rand.NewSource(time.Now().UnixNano())).Perm(len(slice))
+	perm := rand.New(rand.NewSource(time.Now().UnixNano())).Perm(len(slice)) // #nosec G404 // No need for cryptographically secure random number generator
 	for i, v := range perm {
 		result[v] = slice[i]
 	}
@@ -203,7 +203,7 @@ func Zip[T any, R any](slice1 []T, slice2 []R) []Pair[T, R] {
 // Example:
 //
 //	Unzip([]Pair{{1, "a"}, {2, "b"}, {3, "c"}}) // Output: []int{1, 2, 3}, []string{"a", "b", "c"}
-func Unzip[T any, R any](pairs []Pair[T, R]) ([]T, []R) {
+func Unzip[T any, R any](pairs []Pair[T, R]) (p1 []T, p2 []R) {
 	slice1 := make([]T, 0, len(pairs))
 	slice2 := make([]R, 0, len(pairs))
 	for _, p := range pairs {
