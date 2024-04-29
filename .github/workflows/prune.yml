@@ -1,0 +1,17 @@
+name: Prune Registry
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  packages: write
+
+jobs:
+  prune:
+    uses: lvlcn-t/meta/.github/workflows/prune.yml@main
+    with:
+      container: ${{ github.repository.name }}
+      chart: charts/${{ github.repository.name }}
+      keep-younger-than: 7
+      prune-untagged: true
