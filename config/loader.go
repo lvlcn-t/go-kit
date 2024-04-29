@@ -101,8 +101,8 @@ func SetBinaryName(name string) {
 // SetFs replaces the default filesystem with the provided one.
 // This may only be used for testing purposes.
 // This function is not safe for concurrent use.
-func SetFs(fs afero.Fs) {
-	fsys = fs
+func SetFs(filesystem afero.Fs) {
+	fsys = filesystem
 }
 
 // defaultFallback returns the default fallback path for the configuration file.
