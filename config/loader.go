@@ -44,8 +44,8 @@ type Fallback func() (string, error)
 // Its IsEmpty method is called to check if the loaded configuration is empty.
 // Most of the time, you want to implement it like this:
 //
-//	func (c *Config) IsEmpty() bool {
-//		return c == (&Config{})
+//	func (c Config) IsEmpty() bool {
+//		return c == (Config{})
 //	}
 func Load[T Settings](path string, fallbacks ...Fallback) (cfg T, err error) {
 	k := reflect.TypeOf(cfg).Kind()
