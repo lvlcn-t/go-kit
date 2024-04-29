@@ -1,51 +1,121 @@
-# Project Name<!-- omit from toc -->
+# go-kit<!-- omit from toc -->
 
-<!-- markdownlint-disable-next-line -->
+<!-- markdownlint-disable MD033 -->
 <p align="center">
+    <a href="https://pkg.go.dev/github.com/lvlcn-t/go-kit"><img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/lvlcn-t/go-kit.svg"></a>
     <a href="/../../commits/" title="Last Commit"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/lvlcn-t/lvlcn-t?style=flat"></a>
     <a href="/../../issues" title="Open Issues"><img alt="Open Issues" src="https://img.shields.io/github/issues/lvlcn-t/lvlcn-t?style=flat"></a>
+    <a href="/../../pulls" title="Open Pull Requests"><img alt="Open Pull Requests" src="https://img.shields.io/github/issues-pr/lvlcn-t/lvlcn-t?style=flat"></a>
 </p>
+<!-- markdownlint-enable MD033 -->
 
-- [About this component](#about-this-component)
+- [Introduction](#introduction)
 - [Installation](#installation)
-  - [Binary](#binary)
-  - [Container Image](#container-image)
-  - [Helm](#helm)
 - [Usage](#usage)
-  - [Image](#image)
+  - [Configuration](#configuration)
+  - [Lists](#lists)
+  - [Metrics](#metrics)
 - [Code of Conduct](#code-of-conduct)
 - [Working Language](#working-language)
 - [Support and Feedback](#support-and-feedback)
 - [How to Contribute](#how-to-contribute)
 - [Licensing](#licensing)
 
-_tbd_
+This library is a collection of my personal tools and utilities for the Go programming language. It is designed to be used in a wide range of applications, from simple scripts to complex web applications.
 
-## About this component
+It is designed to be simple and easy to use, with a focus on performance and reliability. It is also designed to be flexible and extensible, so that you can easily add new features and functionality as needed.
 
-_tbd_
+## Introduction
+
+The library is divided into several packages, each of which provides a different set of tools and utilities. The following is a brief overview of each package:
+
+- [config](/config/loader.go): A wrapper around [spf13/viper](https://github.com/spf13/viper) to load configuration files with into a struct without the need to write boilerplate code.
+- [lists](/lists/lists.go): A collection of functions to work with lists, such as filtering, mapping, and reducing.
+- [metrics](/metrics/metrics.go): A simple wrapper around [otel](https://opentelemetry.io/docs/languages/go/getting-started/) to get a trace provider based on the provided configuration.
 
 ## Installation
 
-_tbd_
+To install, run:
 
-### Binary
+```bash
+go get github.com/lvlcn-t/go-kit
+```
 
-_tbd_
+And then import the wanted package in your code:
 
-### Container Image
-
-_tbd_
-
-### Helm
-
-_tbd_
+```go
+import "github.com/lvlcn-t/go-kit/<package>"
+```
 
 ## Usage
 
-_tbd_
+The following is a brief overview of how you can use the packages provided by this library:
 
-### Image
+### Configuration
+
+You can use the `config` package to load configuration files into a struct. The package provides a simple API to load configuration files and bind them to a struct.
+
+Here is an example of how you can use the `config` package to load a configuration file into a struct:
+
+```go
+package main
+
+import (
+  "fmt"
+
+  "github.com/lvlcn-t/go-kit/config"
+)
+
+type Config struct {
+  Host string `mapstructure:"host"`
+  Port int    `mapstructure:"port"`
+}
+
+func (c Config) IsEmpty() bool {
+  return c == (Config{})
+}
+
+func main() {
+  // Load the configuration file
+  cfg, err := config.Load[Config]("config.yaml")
+  if err != nil {
+    fmt.Println(err)
+    return
+  }
+
+  fmt.Println(cfg.Host) // Output: localhost
+  fmt.Println(cfg.Port) // Output: 8080
+}
+```
+
+### Lists
+
+You can use the `lists` package to work with lists in Go. The package provides a collection of functions to work with lists, such as filtering, mapping, and reducing.
+
+Here is an example of how you can use the `lists` package to filter a list of integers:
+
+```go
+package main
+
+import (
+  "fmt"
+
+  "github.com/lvlcn-t/go-kit/lists"
+)
+
+func main() {
+  numbers := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+
+  // Filter the list to only include even numbers
+  evens := lists.Filter(numbers, func(n int) bool {
+    return n%2 == 0
+  })
+
+  fmt.Println(evens) // Output: [2 4 6 8 10]
+}
+```
+
+### Metrics
 
 _tbd_
 
