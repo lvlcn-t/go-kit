@@ -5,15 +5,15 @@ import (
 	"time"
 )
 
-// Map applies the function f to each element of the slice, returning a new slice with the results.
+// Apply applies the function f to each element of the slice, returning a new slice with the results.
 //
 // Example:
 //
-//	Map([]int{1, 2, 3}, func(i int) int {
+//	Apply([]int{1, 2, 3}, func(i int) int {
 //		return i * i
 //	}) // Output: []int{1, 4, 9}
-func Map[T any, R any](slice []T, f func(T) R) []R {
-	var result []R
+func Apply[T any, R any](slice []T, f func(T) R) []R {
+	result := make([]R, 0, len(slice))
 	for _, item := range slice {
 		result = append(result, f(item))
 	}
@@ -74,7 +74,7 @@ func Count[T any](slice []T, f Predicate[T]) int {
 //	Distinct([]int{1, 2, 3, 2, 1}) // Output: []int{1, 2, 3}
 func Distinct[T comparable](slice []T) []T {
 	seen := make(map[T]struct{})
-	var result []T
+	result := make([]T, 0, len(slice))
 	for _, v := range slice {
 		if _, ok := seen[v]; !ok {
 			seen[v] = struct{}{}
@@ -93,7 +93,8 @@ func Distinct[T comparable](slice []T) []T {
 //		return i%2 == 0
 //	}) // Output: []int{2, 4}, []int{1, 3}
 func Partition[T any](slice []T, f Predicate[T]) ([]T, []T) {
-	var trueSlice, falseSlice []T
+	trueSlice := make([]T, 0, len(slice))
+	falseSlice := make([]T, 0, len(slice))
 	for _, v := range slice {
 		if f(v) {
 			trueSlice = append(trueSlice, v)
@@ -186,7 +187,11 @@ type Pair[T any, R any] struct {
 //
 //	Zip([]int{1, 2, 3}, []string{"a", "b", "c"}) // Output: []Pair{{1, "a"}, {2, "b"}, {3, "c"}}
 func Zip[T any, R any](slice1 []T, slice2 []R) []Pair[T, R] {
-	var result []Pair[T, R]
+	l := len(slice1)
+	if len(slice2) < l {
+		l = len(slice2)
+	}
+	result := make([]Pair[T, R], 0, l)
 	for i := 0; i < len(slice1) && i < len(slice2); i++ {
 		result = append(result, Pair[T, R]{First: slice1[i], Second: slice2[i]})
 	}
@@ -199,8 +204,8 @@ func Zip[T any, R any](slice1 []T, slice2 []R) []Pair[T, R] {
 //
 //	Unzip([]Pair{{1, "a"}, {2, "b"}, {3, "c"}}) // Output: []int{1, 2, 3}, []string{"a", "b", "c"}
 func Unzip[T any, R any](pairs []Pair[T, R]) ([]T, []R) {
-	var slice1 []T
-	var slice2 []R
+	slice1 := make([]T, 0, len(pairs))
+	slice2 := make([]R, 0, len(pairs))
 	for _, p := range pairs {
 		slice1 = append(slice1, p.First)
 		slice2 = append(slice2, p.Second)
@@ -214,7 +219,7 @@ func Unzip[T any, R any](pairs []Pair[T, R]) ([]T, []R) {
 //
 //	Chunk([]int{1, 2, 3, 4, 5}, 2) // Output: [][]int{{1, 2}, {3, 4}, {5}}
 func Chunk[T any](slice []T, size int) [][]T {
-	var result [][]T
+	result := make([][]T, 0, (len(slice)+size-1)/size)
 	for i := 0; i < len(slice); i += size {
 		end := i + size
 		if end > len(slice) {
@@ -231,7 +236,7 @@ func Chunk[T any](slice []T, size int) [][]T {
 //
 //	Flatten([][]int{{1, 2}, {3, 4}, {5}}) // Output: []int{1, 2, 3, 4, 5}
 func Flatten[T any](slices [][]T) []T {
-	var result []T
+	result := make([]T, 0)
 	for _, slice := range slices {
 		result = append(result, slice...)
 	}
@@ -262,7 +267,7 @@ func Intersect[T comparable](slices ...[]T) []T {
 		}
 	}
 
-	var result []T
+	result := make([]T, 0)
 	for k, v := range counts {
 		if v == len(slices) {
 			result = append(result, k)
@@ -289,7 +294,7 @@ func Difference[T comparable](slices ...[]T) []T {
 		seen[v] = struct{}{}
 	}
 
-	var result []T
+	result := make([]T, 0)
 	for _, v := range slices[0] {
 		if _, ok := seen[v]; !ok {
 			result = append(result, v)
@@ -305,7 +310,7 @@ func Difference[T comparable](slices ...[]T) []T {
 //	Union([]int{1, 2, 3}, []int{2, 3, 4}, []int{3, 4, 5}) // Output: []int{1, 2, 3, 4, 5}
 func Union[T comparable](slices ...[]T) []T {
 	seen := make(map[T]struct{})
-	var result []T
+	result := make([]T, 0)
 	for _, slice := range slices {
 		for _, v := range slice {
 			if _, ok := seen[v]; !ok {
