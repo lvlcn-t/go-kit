@@ -1,4 +1,4 @@
-module github.com/lvlcn-t/meta
+module github.com/lvlcn-t/go-kit
 
 go 1.22
 
