@@ -5,6 +5,7 @@ go 1.22
 require (
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/viper v1.18.2
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
