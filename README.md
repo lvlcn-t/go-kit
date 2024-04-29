@@ -1,4 +1,4 @@
-# go-kit<!-- omit from toc -->
+# go-kit - A collection of tools and utilities for Go<!-- omit from toc -->
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
