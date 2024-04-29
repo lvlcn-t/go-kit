@@ -8,6 +8,7 @@ import (
 type Predicate[T any] func(T) bool
 
 // Filter returns a new slice containing only the elements of the original slice that satisfy the predicate f.
+// If no elements satisfy the predicate, an empty slice is returned.
 //
 // Example:
 //
@@ -15,7 +16,7 @@ type Predicate[T any] func(T) bool
 //		return i%2 == 0
 //	}) // Output: []int{2, 4}
 func Filter[T any](slice []T, f Predicate[T]) []T {
-	var result []T
+	result := make([]T, 0, len(slice))
 	for _, item := range slice {
 		if f(item) {
 			result = append(result, item)
@@ -31,7 +32,7 @@ func Filter[T any](slice []T, f Predicate[T]) []T {
 //	FilterEmpty([]int{1, 2, 3, 0, 4}) // Output: []int{1, 2, 3, 4}
 func FilterEmpty[T any](slice []T) []T {
 	return Filter(slice, func(item T) bool {
-		return reflect.ValueOf(item).IsZero()
+		return !reflect.ValueOf(item).IsZero()
 	})
 }
 
@@ -42,7 +43,7 @@ func FilterEmpty[T any](slice []T) []T {
 //	FilterNil([]*int{nil, new(int), nil}) // Output: []*int{new(int)}
 func FilterNil[T any](slice []T) []T {
 	return Filter(slice, func(item T) bool {
-		return reflect.ValueOf(item).IsNil()
+		return !reflect.ValueOf(item).IsNil()
 	})
 }
 
@@ -53,7 +54,7 @@ func FilterNil[T any](slice []T) []T {
 //	FilterNonEmpty([]int{1, 2, 3, 0, 4}) // Output: []int{0}
 func FilterNonEmpty[T any](slice []T) []T {
 	return Filter(slice, func(item T) bool {
-		return !reflect.ValueOf(item).IsZero()
+		return reflect.ValueOf(item).IsZero()
 	})
 }
 
@@ -64,6 +65,6 @@ func FilterNonEmpty[T any](slice []T) []T {
 //	FilterNonNil([]*int{nil, new(int), nil}) // Output: []*int{nil, nil}
 func FilterNonNil[T any](slice []T) []T {
 	return Filter(slice, func(item T) bool {
-		return !reflect.ValueOf(item).IsNil()
+		return reflect.ValueOf(item).IsNil()
 	})
 }
