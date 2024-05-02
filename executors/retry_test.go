@@ -24,12 +24,10 @@ func TestRetrier_Retry(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:    "nil backoff",
-			retrier: &Retrier{},
-			effector: func(ctx context.Context) error {
-				return nil
-			},
-			wantErr: false,
+			name:     "nil backoff",
+			retrier:  &Retrier{},
+			effector: noopEffector,
+			wantErr:  false,
 		},
 		{
 			name: "success",
@@ -39,18 +37,14 @@ func TestRetrier_Retry(t *testing.T) {
 					return 1
 				},
 			},
-			effector: func(ctx context.Context) error {
-				return nil
-			},
-			wantErr: false,
+			effector: noopEffector,
+			wantErr:  false,
 		},
 		{
-			name:    "success with default retrier",
-			retrier: nil,
-			effector: func(ctx context.Context) error {
-				return nil
-			},
-			wantErr: false,
+			name:     "success with default retrier",
+			retrier:  nil,
+			effector: noopEffector,
+			wantErr:  false,
 		},
 		{
 			name: "error",
