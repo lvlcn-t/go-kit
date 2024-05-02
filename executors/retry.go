@@ -1,4 +1,3 @@
-// executors package provides a set of common executors that can be used to perform given actions.
 package executors
 
 import (

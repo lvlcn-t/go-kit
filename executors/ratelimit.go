@@ -6,6 +6,10 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// RateLimit is the rate limit for the rate limiter.
+// It is an alias for rate.Limit.
+//
+// For more information, see https://pkg.go.dev/golang.org/x/time/rate#Limit.
 type RateLimit = rate.Limit
 
 // RateLimiter runs the effector with the specified rate limit.

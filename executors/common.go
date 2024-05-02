@@ -1,3 +1,5 @@
+// executors package provides a set of common executors that can be used to perform given actions.
+// An executor can be seen as a policy that wraps an action and applies some rules to it.
 package executors
 
 import (
