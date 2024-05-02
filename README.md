@@ -14,6 +14,7 @@
 - [Usage](#usage)
   - [Configuration](#configuration)
   - [Lists](#lists)
+  - [Executors](#executors)
   - [Metrics](#metrics)
 - [Code of Conduct](#code-of-conduct)
 - [Working Language](#working-language)
@@ -31,6 +32,7 @@ The library is divided into several packages, each of which provides a different
 
 - [config](/config/loader.go): A wrapper around [spf13/viper](https://github.com/spf13/viper) to load configuration files with into a struct without the need to write boilerplate code.
 - [lists](/lists/lists.go): A collection of functions to work with lists, such as filtering, mapping, and reducing.
+- [executors](/executors/retry.go): Some useful executors to handle common scenarios like retries with exponential backoff.
 - [metrics](/metrics/metrics.go): A simple wrapper around [otel](https://opentelemetry.io/docs/languages/go/getting-started/) to get a trace provider based on the provided configuration.
 
 ## Installation
@@ -112,6 +114,37 @@ func main() {
   })
 
   fmt.Println(evens) // Output: [2 4 6 8 10]
+}
+```
+
+### Executors
+
+The `executors` package provides some useful executors to handle common scenarios like retries with exponential backoff or a simple executor to run a function with a timeout.
+
+Here is an example of how you can use the `executors` package to retry a function with exponential backoff:
+
+```go
+package main
+
+import (
+  "context"
+  "fmt"
+
+  "github.com/lvlcn-t/go-kit/executors"
+)
+
+func main() {
+  ctx := context.Background()
+  // Initialize the Retry function using the default retrier executor
+  retryableTask := executors.Retry(func(ctx context.Context) error {
+    // Do something that may fail like an HTTP request
+    return nil
+  })
+  // Run the Retry function and handle the error
+  err := retryableTask(ctx)
+  if err != nil {
+    fmt.Println(err)
+  }
 }
 ```
 
