@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/viper v1.18.2
-	golang.org/x/sync v0.5.0
+	golang.org/x/sync v0.7.0
 	golang.org/x/time v0.5.0
 	sigs.k8s.io/yaml v1.4.0
 )
