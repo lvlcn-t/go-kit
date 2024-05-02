@@ -121,7 +121,7 @@ func main() {
 
 The `executors` package provides some useful executors to handle common scenarios like retries with exponential backoff or a simple executor to run a function with a timeout.
 
-Here is an example of how you can use the `executors` package to retry a function with exponential backoff:
+Here is an example of how you can use the `executors` package to create an executor with multiple policies that are applied to the task in the order of the method calls:
 
 ```go
 package main
@@ -129,20 +129,28 @@ package main
 import (
   "context"
   "fmt"
+  "time"
 
   "github.com/lvlcn-t/go-kit/executors"
 )
 
 func main() {
-  ctx := context.Background()
-  // Initialize the Retry function using the default retrier executor
-  retryableTask := executors.Retry(func(ctx context.Context) error {
+  // Create a task that may fail and needs to be retried
+  task := executors.Effector(func(ctx context.Context) error {
     // Do something that may fail like an HTTP request
     return nil
   })
-  // Run the Retry function and handle the error
-  err := retryableTask(ctx)
+
+  // Apply multiple policies to the task
+  task = task.WithRetry(executors.DefaultRetrier).
+    WithTimeout(1*time.Second).
+    WithRateLimit(executors.RateLimit(1)).
+    WithCircuitBreaker(3, 1*time.Second)
+
+  // Run the task with the applied policies with a context
+  err := task.Do(context.Background())
   if err != nil {
+    // Handle the error after all retries
     fmt.Println(err)
   }
 }

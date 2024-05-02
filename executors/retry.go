@@ -6,9 +6,6 @@ import (
 	"time"
 )
 
-// Effector is a function that performs an action and returns an error
-type Effector func(ctx context.Context) error
-
 // Backoff is a function that returns the duration to wait before the next retry
 type Backoff func(retries int) time.Duration
 
