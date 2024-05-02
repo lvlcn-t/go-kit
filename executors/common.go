@@ -10,6 +10,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+var noopEffector Effector = func(_ context.Context) error { return nil }
+
 // Effector is a function that performs an action and returns an error.
 type Effector func(ctx context.Context) error
 

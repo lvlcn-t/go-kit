@@ -24,9 +24,7 @@ var DefaultRetrier = Retrier{
 // If no backoff function is provided, the default backoff function is used.
 func (r *Retrier) Retry(effector Effector) Effector {
 	if effector == nil {
-		return func(_ context.Context) error {
-			return nil
-		}
+		return noopEffector
 	}
 
 	if r.Backoff == nil {

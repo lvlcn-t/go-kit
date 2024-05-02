@@ -11,6 +11,10 @@ var ErrCircuitOpen = errors.New("circuit open")
 
 // CircuitBreaker returns an effector that stops calling the task if it fails a certain number of times, until a certain amount of time has passed.
 func CircuitBreaker(maxFailures int, resetTimeout time.Duration, effector Effector) Effector {
+	if effector == nil {
+		return noopEffector
+	}
+
 	// failures is the number of failures that have occurred.
 	var failures int
 	// lastFailure is the time of the last failure.
