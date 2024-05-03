@@ -69,7 +69,7 @@ func TestTimeout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			effector := Timeout(tt.timeout, tt.effector)
+			effector := Timeouter(tt.timeout, tt.effector)
 
 			err := effector(context.Background())
 			if (err != nil) != tt.wantErr {

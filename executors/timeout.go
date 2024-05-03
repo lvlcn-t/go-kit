@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// Timeout returns an effector that stops calling the task if it takes longer than the specified timeout.
-func Timeout(timeout time.Duration, effector Effector) Effector {
+// Timeouter returns an effector that stops calling the task if it takes longer than the specified timeout.
+func Timeouter(timeout time.Duration, effector Effector) Effector {
 	if effector == nil {
 		return noopEffector
 	}

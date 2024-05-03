@@ -31,7 +31,8 @@ func TestEffector_MultiplePolicies(t *testing.T) {
 		WithRetry(retrier).
 		WithTimeout(timeout).
 		WithRateLimit(rateLimit).
-		WithCircuitBreaker(maxFailures, resetTimeout)
+		WithCircuitBreaker(maxFailures, resetTimeout).
+		WithProtection()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()

@@ -31,7 +31,7 @@ func (e Effector) WithRetry(retrier Retrier) Effector {
 
 // WithTimeout returns an effector that runs the effector with a timeout.
 func (e Effector) WithTimeout(timeout time.Duration) Effector {
-	return Timeout(timeout, e)
+	return Timeouter(timeout, e)
 }
 
 // WithRateLimit returns an effector that runs the effector with the specified rate limit.
@@ -42,6 +42,11 @@ func (e Effector) WithRateLimit(r rate.Limit) Effector {
 // WithCircuitBreaker returns an effector that stops calling the task if it fails a certain number of times, until a certain amount of time has passed.
 func (e Effector) WithCircuitBreaker(maxFailures int, resetTimeout time.Duration) Effector {
 	return CircuitBreaker(maxFailures, resetTimeout, e)
+}
+
+// WithProtection returns an effector that recovers from panics and returns them as errors.
+func (e Effector) WithProtection() Effector {
+	return Protector(e)
 }
 
 // Parallel runs the effectors concurrently and returns the first error that occurs.
