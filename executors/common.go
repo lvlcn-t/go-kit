@@ -10,10 +10,11 @@ import (
 	"golang.org/x/time/rate"
 )
 
-var noopEffector Effector = func(_ context.Context) error { return nil }
-
 // Effector is a function that performs an action and returns an error.
 type Effector func(ctx context.Context) error
+
+// noopEffector is an effector that does nothing.
+func noopEffector(_ context.Context) error { return nil }
 
 // Do runs the effector and returns the error.
 // If a context is provided, it is used, otherwise a new context is created.
@@ -22,6 +23,17 @@ func (e Effector) Do(ctx ...context.Context) error {
 		return e(ctx[0])
 	}
 	return e(context.Background())
+}
+
+// Go runs the effector concurrently and returns a channel that will receive the error.
+// The channel is closed when the effector finishes.
+func (e Effector) Go(ctx ...context.Context) <-chan error {
+	ch := make(chan error, 1)
+	go func() {
+		ch <- e.Do(ctx...)
+		close(ch)
+	}()
+	return ch
 }
 
 // WithRetry returns an effector that retries the effector a number of times with a delay between each retry.
