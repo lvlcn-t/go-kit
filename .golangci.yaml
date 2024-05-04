@@ -53,7 +53,9 @@ linters-settings:
       - strings.SplitN
 
   govet:
-    shadow: true # This is an allowed field of govet, so ignore the error here
+    enable-all: true
+    disable:
+      - fieldalignment # disabled because it's too strict, it checks if struct fields are sorted by size
     settings:
       printf:
         funcs:

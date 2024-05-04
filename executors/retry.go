@@ -56,8 +56,8 @@ func Retry(effector Effector) Effector {
 
 // SetMaxRetries sets the maximum number of retries.
 // Not safe to use concurrently.
-func SetMaxRetries(max int) {
-	DefaultRetrier.MaxRetries = max
+func SetMaxRetries(maximum int) {
+	DefaultRetrier.MaxRetries = maximum
 }
 
 // SetBackoff sets the backoff function.
