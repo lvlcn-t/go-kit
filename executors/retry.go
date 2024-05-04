@@ -6,7 +6,7 @@ import (
 )
 
 // Backoff is a function that returns the duration to wait before the next retry
-type Backoff func(retries int) time.Duration
+type Backoff func(retries uint) time.Duration
 
 // Retrier is a struct that retries an action a number of times with a delay between each retry.
 type Retrier struct {
@@ -40,7 +40,7 @@ func (r *Retrier) Retry(effector Effector) Effector {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case <-time.After(r.Backoff(i)):
+			case <-time.After(r.Backoff(uint(i))):
 			}
 		}
 		return err
@@ -66,8 +66,8 @@ func SetBackoff(backoff Backoff) {
 	DefaultRetrier.Backoff = backoff
 }
 
-// DefaultBackoff is the default backoff function that exponentially increases the delay between each retry.
+// DefaultBackoff calculates the delay for the next retry.
 // The delay is calculated as 2^retries seconds.
-func DefaultBackoff(retries int) time.Duration {
-	return time.Duration(1<<uint(retries)) * time.Second
+func DefaultBackoff(retries uint) time.Duration {
+	return time.Duration(1<<retries) * time.Second
 }

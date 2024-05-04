@@ -33,7 +33,7 @@ func TestRetrier_Retry(t *testing.T) {
 			name: "success",
 			retrier: &Retrier{
 				MaxRetries: 3,
-				Backoff: func(retries int) time.Duration {
+				Backoff: func(retries uint) time.Duration {
 					return 1
 				},
 			},
@@ -50,7 +50,7 @@ func TestRetrier_Retry(t *testing.T) {
 			name: "error",
 			retrier: &Retrier{
 				MaxRetries: 3,
-				Backoff: func(retries int) time.Duration {
+				Backoff: func(retries uint) time.Duration {
 					return 0
 				},
 			},
@@ -81,7 +81,7 @@ func TestRetrier_Retry_Context_Cancel(t *testing.T) {
 
 	retrier := &Retrier{
 		MaxRetries: 3,
-		Backoff: func(retries int) time.Duration {
+		Backoff: func(retries uint) time.Duration {
 			return 10 * time.Millisecond
 		},
 	}
@@ -114,7 +114,7 @@ func TestDefaultRetrier_SetBackoff(t *testing.T) {
 		},
 		{
 			name: "success",
-			backoff: func(retries int) time.Duration {
+			backoff: func(retries uint) time.Duration {
 				return 1
 			},
 		},
@@ -160,7 +160,7 @@ func TestRetrier_DefaultBackoff(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		retries int
+		retries uint
 		want    time.Duration
 	}{
 		{
