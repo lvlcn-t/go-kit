@@ -3,9 +3,9 @@
 <!-- markdownlint-disable MD033 -->
 <p align="center">
     <a href="https://pkg.go.dev/github.com/lvlcn-t/go-kit"><img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/lvlcn-t/go-kit.svg"></a>
-    <a href="/../../commits/" title="Last Commit"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/lvlcn-t/lvlcn-t?style=flat"></a>
-    <a href="/../../issues" title="Open Issues"><img alt="Open Issues" src="https://img.shields.io/github/issues/lvlcn-t/lvlcn-t?style=flat"></a>
-    <a href="/../../pulls" title="Open Pull Requests"><img alt="Open Pull Requests" src="https://img.shields.io/github/issues-pr/lvlcn-t/lvlcn-t?style=flat"></a>
+    <a href="/../../commits/" title="Last Commit"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/lvlcn-t/go-kit?style=flat"></a>
+    <a href="/../../issues" title="Open Issues"><img alt="Open Issues" src="https://img.shields.io/github/issues/lvlcn-t/go-kit?style=flat"></a>
+    <a href="/../../pulls" title="Open Pull Requests"><img alt="Open Pull Requests" src="https://img.shields.io/github/issues-pr/lvlcn-t/go-kit?style=flat"></a>
 </p>
 <!-- markdownlint-enable MD033 -->
 
@@ -179,9 +179,9 @@ The application itself and all end-user facing content will be made available in
 
 The following channels are available for discussions, feedback, and support requests:
 
-| Type       | Channel                                                                                                                   |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **Issues** | [![General Discussion](https://img.shields.io/github/issues/lvlcn-t/lvlcn-t?style=flat-square)](/../../issues/new/choose) |
+| Type       | Channel                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Issues** | [![General Discussion](https://img.shields.io/github/issues/lvlcn-t/go-kit?style=flat-square)](/../../issues/new/choose) |
 
 ## How to Contribute
 
