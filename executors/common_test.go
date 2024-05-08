@@ -39,6 +39,7 @@ func TestEffector_Run(t *testing.T) {
 		run      func(Effector, context.Context) error
 		wantErr  bool
 		errType  reflect.Type
+		errors   []error
 	}{
 		{
 			name: "success",
@@ -159,6 +160,43 @@ func TestEffector_Run(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name:     "fallback error",
+			effector: func(ctx context.Context) error { return errors.New("task failed") },
+			run:      run,
+			policies: []func(Effector) Effector{
+				func(e Effector) Effector {
+					return e.WithFallback(func(ctx context.Context) error { return errors.New("fallback failed") })
+				},
+			},
+			wantErr: true,
+			errType: reflect.TypeOf(errors.Join(errors.New(""))),
+			errors:  []error{errors.New("task failed"), errors.New("fallback failed")},
+		},
+		{
+			name:     "fallback success",
+			effector: func(ctx context.Context) error { return errors.New("task failed") },
+			run:      run,
+			policies: []func(Effector) Effector{
+				func(e Effector) Effector {
+					return e.WithFallback(noopEffector)
+				},
+			},
+			wantErr: true,
+			errType: reflect.TypeOf(errors.Join(errors.New(""))),
+			errors:  []error{errors.New("task failed")},
+		},
+		{
+			name:     "fallback not called",
+			effector: noopEffector,
+			run:      run,
+			policies: []func(Effector) Effector{
+				func(e Effector) Effector {
+					return e.WithFallback(func(ctx context.Context) error { return errors.New("fallback failed") })
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -178,6 +216,13 @@ func TestEffector_Run(t *testing.T) {
 
 			if tt.errType != nil && reflect.TypeOf(err) != tt.errType {
 				t.Errorf("Effector.Do() error = %v (%T), wantErr %v", err, err, tt.errType)
+			}
+
+			if tt.errors != nil {
+				errs := err.(interface{ Unwrap() []error }).Unwrap()
+				if len(errs) != len(tt.errors) {
+					t.Errorf("Effector.Do() errors = %v, want %v", errs, tt.errors)
+				}
 			}
 		})
 	}

@@ -4,6 +4,7 @@ package executors
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -59,6 +60,17 @@ func (e Effector) WithCircuitBreaker(maxFailures int, resetTimeout time.Duration
 // WithProtection returns an effector that recovers from panics and returns them as errors.
 func (e Effector) WithProtection() Effector {
 	return Protector(e)
+}
+
+// WithFallback returns an effector that runs the fallback effector if the first one returns an error.
+// Returns all errors that occurred as wrapped [errors.joinError] error.
+func (e Effector) WithFallback(fallback Effector) Effector {
+	return func(ctx context.Context) error {
+		if err := e(ctx); err != nil {
+			return errors.Join(err, fallback(ctx))
+		}
+		return nil
+	}
 }
 
 // Parallel runs the effectors concurrently and returns the first error that occurs.
