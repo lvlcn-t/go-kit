@@ -9,18 +9,18 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type Config struct {
+type config struct {
 	Host string
 	Port int
 }
 
-func (c Config) IsEmpty() bool {
-	return c == (Config{})
+func (c config) IsEmpty() bool {
+	return c == (config{})
 }
 
-type Invalid int
+type invalid int
 
-func (i Invalid) IsEmpty() bool {
+func (i invalid) IsEmpty() bool {
 	return false
 }
 
@@ -35,7 +35,7 @@ func TestLoad(t *testing.T) {
 		{
 			name: "success",
 			path: "testdata/config.yaml",
-			want: Config{
+			want: config{
 				Host: "localhost",
 				Port: 8080,
 			},
@@ -47,7 +47,7 @@ func TestLoad(t *testing.T) {
 					return "testdata/config.yaml", nil
 				},
 			},
-			want: Config{
+			want: config{
 				Host: "localhost",
 				Port: 8080,
 			},
@@ -63,7 +63,7 @@ func TestLoad(t *testing.T) {
 		},
 		{
 			name: "empty path",
-			want: Config{
+			want: config{
 				Host: "localhost",
 				Port: 8080,
 			},
@@ -76,7 +76,7 @@ func TestLoad(t *testing.T) {
 		{
 			name:    "invalid type",
 			path:    "testdata/config.yaml",
-			want:    Invalid(0),
+			want:    invalid(0),
 			wantErr: true,
 		},
 	}
@@ -84,7 +84,7 @@ func TestLoad(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setup(t, tt.path, tt.want, tt.fallbacks...)
 
-			got, err := Load[Config](tt.path, tt.fallbacks...)
+			got, err := Load[config](tt.path, tt.fallbacks...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				return
