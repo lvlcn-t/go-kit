@@ -86,7 +86,7 @@ func Load[T Settings](path string, fallbacks ...Fallback) (cfg T, err error) {
 	}
 
 	if cfg.IsEmpty() {
-		return cfg, errors.New("you must provide a configuration")
+		return cfg, &ErrConfigEmpty{}
 	}
 
 	return cfg, nil

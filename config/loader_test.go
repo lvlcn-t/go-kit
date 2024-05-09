@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -18,12 +19,6 @@ func (c config) IsEmpty() bool {
 	return c == (config{})
 }
 
-type invalid int
-
-func (i invalid) IsEmpty() bool {
-	return false
-}
-
 func TestLoad(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -31,6 +26,7 @@ func TestLoad(t *testing.T) {
 		fallbacks []Fallback
 		want      Settings
 		wantErr   bool
+		errType   reflect.Type
 	}{
 		{
 			name: "success",
@@ -39,45 +35,43 @@ func TestLoad(t *testing.T) {
 				Host: "localhost",
 				Port: 8080,
 			},
+			wantErr: false,
 		},
 		{
 			name: "fallback",
-			fallbacks: []Fallback{
-				func() (string, error) {
-					return "testdata/config.yaml", nil
-				},
-			},
-			want: config{
-				Host: "localhost",
-				Port: 8080,
-			},
+			path: "",
+			fallbacks: []Fallback{func() (string, error) {
+				return "testdata/config.yaml", nil
+			}},
+			want:    config{Host: "localhost", Port: 8080},
+			wantErr: false,
 		},
 		{
 			name: "fallback error",
-			fallbacks: []Fallback{
-				func() (string, error) {
-					return "", errors.New("error")
-				},
-			},
+			path: "",
+			fallbacks: []Fallback{func() (string, error) {
+				return "", errors.New("error")
+			}},
 			wantErr: true,
+			errType: reflect.TypeOf(fmt.Errorf("%w", errors.New("error"))),
 		},
 		{
-			name: "empty path",
-			want: config{
-				Host: "localhost",
-				Port: 8080,
-			},
+			name:    "empty path",
+			path:    "",
+			want:    config{Host: "localhost", Port: 8080},
+			wantErr: false,
 		},
 		{
 			name:    "empty config",
 			path:    "testdata/empty.yaml",
+			want:    config{},
 			wantErr: true,
 		},
 		{
-			name:    "invalid type",
-			path:    "testdata/config.yaml",
-			want:    invalid(0),
+			name:    "invalid config format",
+			path:    "testdata/invalid.yaml",
 			wantErr: true,
+			errType: reflect.TypeOf(fmt.Errorf("%w", errors.New("yaml: unmarshal errors"))),
 		},
 	}
 	for _, tt := range tests {
@@ -89,10 +83,28 @@ func TestLoad(t *testing.T) {
 				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
+			if tt.wantErr && tt.errType != nil && reflect.TypeOf(err) != tt.errType {
+				t.Errorf("Load() error type = %v, want %v", reflect.TypeOf(err), tt.errType)
+			}
+
 			if err == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Load() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+type invalid int
+
+func (i invalid) IsEmpty() bool {
+	return false
+}
+
+func TestLoad_InvalidType(t *testing.T) {
+	_, err := Load[invalid]("testdata/config.yaml")
+	if err == nil {
+		t.Error("Load() error = nil, want error")
 	}
 }
 
@@ -117,9 +129,13 @@ func setup(t *testing.T, path string, cfg Settings, fallbacks ...Fallback) {
 
 	fsys = afero.NewMemMapFs()
 
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		t.Fatalf("yaml.Marshal() error = %v", err)
+	var err error
+	data := append([]byte{}, []byte("in: va: lid\n")...)
+	if cfg != nil {
+		data, err = yaml.Marshal(cfg)
+		if err != nil {
+			t.Fatalf("yaml.Marshal() error = %v", err)
+		}
 	}
 
 	if err := afero.WriteFile(fsys, path, data, 0o644); err != nil {

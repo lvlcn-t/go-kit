@@ -37,3 +37,11 @@ func (e ErrFieldInvalid) Is(target error) bool {
 	_, ok := target.(ErrFieldInvalid)
 	return ok
 }
+
+// ErrConfigEmpty is an error type that indicates an empty configuration
+type ErrConfigEmpty struct{}
+
+// Error returns the error message.
+func (e ErrConfigEmpty) Error() string {
+	return "you must provide a configuration"
+}
