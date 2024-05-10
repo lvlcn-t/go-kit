@@ -471,6 +471,13 @@ func TestOperations_Intersect(t *testing.T) {
 			want:   []int{},
 		},
 		{
+			name: "one slice",
+			slices: [][]int{
+				{1, 2, 3},
+			},
+			want: []int{1, 2, 3},
+		},
+		{
 			name: "no common element",
 			slices: [][]int{
 				{1, 2, 3},
@@ -509,6 +516,13 @@ func TestOperations_Difference(t *testing.T) {
 			name:   "empty slice",
 			slices: [][]int{},
 			want:   []int{},
+		},
+		{
+			name: "one slice",
+			slices: [][]int{
+				{1, 2, 3},
+			},
+			want: []int{1, 2, 3},
 		},
 		{
 			name: "no common element",
