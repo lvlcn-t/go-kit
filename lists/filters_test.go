@@ -179,3 +179,79 @@ func TestFilters_FilterNonNil(t *testing.T) {
 		})
 	}
 }
+
+func TestFilters_MatchIndex_MatchLastIndex(t *testing.T) {
+	type testFunc[T any] func(slice []T, f Predicate[T]) int
+
+	tests := []struct {
+		name  string
+		slice []int
+		f     Predicate[int]
+		fun   testFunc[int]
+		want  int
+	}{
+		{
+			name:  "success - MatchIndex",
+			slice: []int{1, 2, 3, 4},
+			f: func(i int) bool {
+				return i%2 == 0
+			},
+			fun:  MatchIndex[int],
+			want: 1,
+		},
+		{
+			name:  "empty slice - MatchIndex",
+			slice: []int{},
+			f: func(i int) bool {
+				return i%2 == 0
+			},
+			fun:  MatchIndex[int],
+			want: -1,
+		},
+		{
+			name:  "no match - MatchIndex",
+			slice: []int{1, 3, 5},
+			f: func(i int) bool {
+				return i%2 == 0
+			},
+			fun:  MatchIndex[int],
+			want: -1,
+		},
+		{
+			name:  "success - MatchLastIndex",
+			slice: []int{1, 2, 3, 4},
+			f: func(i int) bool {
+				return i%2 == 0
+			},
+			fun:  MatchLastIndex[int],
+			want: 3,
+		},
+		{
+			name:  "empty slice - MatchLastIndex",
+			slice: []int{},
+			f: func(i int) bool {
+				return i%2 == 0
+			},
+			fun:  MatchLastIndex[int],
+			want: -1,
+		},
+		{
+			name:  "no match - MatchLastIndex",
+			slice: []int{1, 3, 5},
+			f: func(i int) bool {
+				return i%2 == 0
+			},
+			fun:  MatchLastIndex[int],
+			want: -1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.fun(tt.slice, tt.f)
+			if got != tt.want {
+				t.Errorf("%s() = %v, want %v", reflect.TypeOf(tt.fun).Name(), got, tt.want)
+			}
+		})
+	}
+}

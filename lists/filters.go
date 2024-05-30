@@ -68,3 +68,37 @@ func FilterNonNil[T any](slice []T) []T {
 		return reflect.ValueOf(item).IsNil()
 	})
 }
+
+// MatchIndex returns the index of the first element in the slice that satisfies the predicate f.
+// If no elements satisfy the predicate, -1 is returned.
+//
+// Example:
+//
+//	MatchIndex([]int{1, 2, 3, 4}, func(i int) bool {
+//		return i%2 == 0
+//	}) // Output: 1
+func MatchIndex[T any](slice []T, f Predicate[T]) int {
+	for i, item := range slice {
+		if f(item) {
+			return i
+		}
+	}
+	return -1
+}
+
+// MatchLastIndex returns the index of the last element in the slice that satisfies the predicate f.
+// If no elements satisfy the predicate, -1 is returned.
+//
+// Example:
+//
+//	MatchLastIndex([]int{1, 2, 3, 4}, func(i int) bool {
+//		return i%2 == 0
+//	}) // Output: 3
+func MatchLastIndex[T any](slice []T, f Predicate[T]) int {
+	for i := len(slice) - 1; i >= 0; i-- {
+		if f(slice[i]) {
+			return i
+		}
+	}
+	return -1
+}
