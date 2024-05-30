@@ -63,13 +63,22 @@ func (m *manager) GetRegistry() *prometheus.Registry {
 	return m.registry
 }
 
+// ErrAlreadyInitialized is an error that is returned when the metrics are already initialized.
+// This error is returned when the Initialize method is called more than once.
 type ErrAlreadyInitialized struct {
 	name    string
 	version string
 }
 
+// Error returns the error message.
 func (e *ErrAlreadyInitialized) Error() string {
 	return fmt.Sprintf("metrics already initialized for service %q version %q", e.name, e.version)
+}
+
+// Is reports whether the error is an ErrAlreadyInitialized.
+func (e *ErrAlreadyInitialized) Is(target error) bool {
+	_, ok := target.(*ErrAlreadyInitialized)
+	return ok
 }
 
 // Initialize initializes the OpenTelemetry metrics with the given service name and version.
