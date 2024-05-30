@@ -158,7 +158,64 @@ func main() {
 
 ### Metrics
 
-_tbd_
+The `metrics` package provides two wrappers around [open telemetry](https://opentelemetry.io/docs/languages/go/getting-started/) and [prometheus](https://prometheus.io/docs/introduction/overview/) to initialize a trace provider and a prometheus registry.
+
+Here is an example of how you can use the `metrics` package to use both the trace provider and the prometheus registry:
+
+```go
+package main
+
+import (
+  "context"
+  "fmt"
+
+  "github.com/lvlcn-t/go-kit/metrics"
+  "github.com/prometheus/client_golang/prometheus"
+  "go.opentelemetry.io/otel"
+  "go.opentelemetry.io/otel/codes"
+)
+
+func main() {
+  ctx := context.Background()
+  metrics := metrics.New(metrics.Config{
+    Exporter: metrics.GRPC,
+    Url:      "localhost:4317",
+    Token:    "my-bearer-token",
+    CertPath: "path/to/my-otel-provider/cert.pem",
+  })
+
+  // Initialize the open telemetry tracer with the given service name and version
+  err := metrics.Initialize(ctx, "my-service-name", "v0.1.0")
+  if err != nil {
+    fmt.Println("failed to initialize metrics:", err)
+    return
+  }
+  defer func() {
+    if err := metrics.Shutdown(ctx); err != nil {
+      fmt.Println("failed to shutdown metrics:", err)
+    }
+  }()
+
+  // Register some prometheus collectors to the registry
+  registry := metrics.GetRegistry()
+  registry.MustRegister(&prometheus.GaugeVec{})
+
+  logTraceEvent(ctx)
+}
+
+// logTraceEvent logs a trace event using the OpenTelemetry tracer
+func logTraceEvent(ctx context.Context) {
+  tp := otel.GetTracerProvider()
+  tracer := tp.Tracer("my-service-name")
+
+  _, span := tracer.Start(ctx, "my-span")
+  defer span.End()
+
+  span.AddEvent("my-event")
+  span.SetStatus(codes.Error, "my-error")
+  span.RecordError(fmt.Errorf("my-error"))
+}
+```
 
 ## Code of Conduct
 
