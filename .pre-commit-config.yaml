@@ -7,17 +7,6 @@ ci:
   autoupdate_schedule: weekly
 
 repos:
-  - repo: local
-    hooks:
-      - id: go-generate-repo
-        name: go generate
-        entry: go
-        args: [generate, ./...]
-        language: system
-        types: [go]
-        pass_filenames: false
-        always_run: true
-
   - repo: https://github.com/tekwizely/pre-commit-golang
     rev: v1.0.0-rc.1
     hooks:

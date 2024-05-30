@@ -1,6 +1,13 @@
-name: Test
+name: Test Metrics Module
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - metrics/**
+      - .github/workflows/metrics.yml
 
 permissions:
   # Needed to read the content of the repository
@@ -12,11 +19,16 @@ permissions:
   # Needed to annotate the code with the scan results > https://github.blog/2018-12-14-introducing-check-runs-and-annotations/
   checks: write
 
+defaults:
+  run:
+    shell: bash
+    working-directory: ./metrics
+
 jobs:
   test:
     uses: lvlcn-t/meta/.github/workflows/test.yml@main
     with:
-      go_version_file: go.mod
+      go_version_file: ./metrics/go.mod
       golangci_config: .golangci.yaml
       private_go_server: ""
       before_tests: ""
