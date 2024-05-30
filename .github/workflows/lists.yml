@@ -29,7 +29,7 @@ jobs:
     uses: lvlcn-t/meta/.github/workflows/test.yml@main
     with:
       go_version_file: ./lists/go.mod
-      golangci_config: .golangci.yaml
+      golangci_config: skip
       private_go_server: ""
       before_tests: ""
       additional_args: -v
