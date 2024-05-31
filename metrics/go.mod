@@ -3,6 +3,7 @@ module github.com/lvlcn-t/go-kit/metrics
 go 1.22
 
 require (
+	github.com/google/go-cmp v0.6.0
 	github.com/prometheus/client_golang v1.19.1
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.27.0
