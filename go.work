@@ -1,6 +1,7 @@
 go 1.22
 
 use (
+	./apimanager
 	./config
 	./executors
 	./lists
