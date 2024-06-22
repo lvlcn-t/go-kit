@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -66,18 +67,49 @@ type RouteGroup struct {
 	App fiber.Router
 }
 
+// Config is the configuration of the server.
 type Config struct {
 	// Address is the address to listen on.
 	Address string `yaml:"address" mapstructure:"address"`
 	// BasePath is the base path of the API.
 	BasePath string `yaml:"basePath" mapstructure:"basePath"`
+	// TLS is the TLS configuration.
+	TLS TLSConfig `yaml:"tls" mapstructure:"tls"`
 }
 
+// TLSConfig is the TLS configuration.
+type TLSConfig struct {
+	// Enabled indicates if TLS is enabled.
+	Enabled bool `yaml:"enabled" mapstructure:"enabled"`
+	// CertFile is the path to the certificate file.
+	CertFile string `yaml:"certPath" mapstructure:"certPath"`
+	// CertKeyFile is the path to the certificate key file.
+	CertKeyFile string `yaml:"keyPath" mapstructure:"keyPath"`
+}
+
+// IsEmpty checks if the configuration is empty.
+func (c Config) IsEmpty() bool {
+	return reflect.DeepEqual(c, Config{})
+}
+
+// Validate validates the configuration.
 func (c *Config) Validate() error {
+	var err error
 	if c.Address == "" {
-		return errors.New("api.address is required")
+		err = errors.New("api.address is required")
 	}
-	return nil
+
+	if c.TLS.Enabled {
+		if c.TLS.CertFile == "" {
+			err = errors.Join(err, errors.New("api.tls.certPath is required"))
+		}
+
+		if c.TLS.CertKeyFile == "" {
+			err = errors.Join(err, errors.New("api.tls.keyPath is required"))
+		}
+	}
+
+	return err
 }
 
 type server struct {
@@ -105,6 +137,10 @@ func New(c *Config, middlewares ...fiber.Handler) Server {
 		middlewares = append(middlewares, middleware.Recover(), middleware.Logger("/healthz"))
 	}
 
+	if c.BasePath == "" {
+		c.BasePath = "/"
+	}
+
 	return &server{
 		mu:          sync.Mutex{},
 		config:      c,
@@ -126,9 +162,17 @@ func (s *server) Run(ctx context.Context) error {
 		return err
 	}
 
+	var cfg []fiber.ListenConfig
+	if s.config.TLS.Enabled {
+		cfg = append(cfg, fiber.ListenConfig{
+			CertFile:    s.config.TLS.CertFile,
+			CertKeyFile: s.config.TLS.CertKeyFile,
+		})
+	}
+
 	cErr := make(chan error, 1)
 	go func() {
-		cErr <- s.app.Listen(s.config.Address)
+		cErr <- s.app.Listen(s.config.Address, cfg...)
 	}()
 
 	select {
