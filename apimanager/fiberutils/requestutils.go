@@ -35,35 +35,6 @@ func Header[T any](c fiber.Ctx, name string, parse func(string) (T, error)) (T, 
 	return parseParam(name, c.Get, parse)
 }
 
-// IP returns the IP address of the client that sent the request.
-func IP[T interface{ string | net.IP }](c fiber.Ctx) T {
-	var empty T
-	if _, ok := any(empty).(string); ok {
-		return any(c.IP()).(T)
-	}
-
-	ip := net.ParseIP(c.IP())
-	if ip == nil {
-		return empty
-	}
-
-	return any(net.ParseIP(c.IP())).(T)
-}
-
-// Port returns the port of the client that sent the request.
-func Port[T interface{ int | string }](c fiber.Ctx) T {
-	var empty T
-	if _, ok := any(empty).(string); ok {
-		return any(c.Port()).(T)
-	}
-
-	v, err := strconv.Atoi(c.Port())
-	if err != nil {
-		return empty
-	}
-	return any(v).(T)
-}
-
 // Body returns the body of the request and converts it to the given type.
 func Body[T any](c fiber.Ctx) (T, error) {
 	var v T
@@ -90,4 +61,52 @@ func parseParam[T any](name string, get func(string, ...string) string, parse fu
 	}
 
 	return parse(v)
+}
+
+type Client struct {
+	ip   string
+	port string
+}
+
+func NewClient(c fiber.Ctx) Client {
+	return Client{
+		ip:   c.IP(),
+		port: c.Port(),
+	}
+}
+
+func (b *Client) String() string {
+	return fmt.Sprintf("%s:%s", b.ip, b.port)
+}
+
+func (b *Client) IP() IP {
+	return IP(net.ParseIP(b.ip))
+}
+
+func (b *Client) Port() Port {
+	v, err := strconv.Atoi(b.port)
+	if err != nil {
+		return Port(0)
+	}
+	return Port(v)
+}
+
+type IP net.IP
+
+func (i IP) String() string {
+	return net.IP(i).String()
+}
+
+func (i IP) Get() net.IP {
+	return net.IP(i)
+}
+
+type Port uint16
+
+func (p Port) String() string {
+	return strconv.Itoa(int(p))
+}
+
+func (p Port) Get() uint16 {
+	return uint16(p)
 }

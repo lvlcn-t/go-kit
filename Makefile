@@ -12,9 +12,8 @@ help: ### Display this help
 	@awk 'BEGIN {FS = ":.*?### "} /^[a-zA-Z_-]+:.*?### / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: lint
-lint: ### Runs all the linters
-	@pre-commit run --hook-stage pre-push -a
-	@pre-commit run --hook-stage pre-commit -a
+lint: ### Runs all pre-commit hooks on all modules
+	@pre-commit run -a
 
 .PHONY: mod-tidy
 mod-tidy: ### Runs go mod tidy on all modules
