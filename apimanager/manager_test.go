@@ -37,7 +37,7 @@ func TestNewServer(t *testing.T) {
 					groups: []RouteGroup{},
 					middlewares: []fiber.Handler{
 						middleware.Recover(),
-						middleware.Logger("/healthz"),
+						middleware.Logger(),
 					},
 				}
 			},
@@ -122,6 +122,29 @@ func TestNewServer(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:        "New with empty config",
+			config:      &Config{},
+			middlewares: nil,
+			want: func(t *testing.T) *server {
+				app := fiber.New()
+				return &server{
+					mu: sync.Mutex{},
+					config: &Config{
+						Address:  ":8080",
+						BasePath: "/",
+					},
+					app:    app,
+					router: app.Group("/"),
+					routes: []Route{},
+					groups: []RouteGroup{},
+					middlewares: []fiber.Handler{
+						middleware.Recover(),
+						middleware.Logger(),
+					},
+				}
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -145,6 +168,8 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestServer_Run(t *testing.T) {
+	const defaultRoutes = (1 * 9) // 1 route * 9 methods
+
 	tests := []struct {
 		name     string
 		server   Server
@@ -231,7 +256,7 @@ func TestServer_Run(t *testing.T) {
 				t.Errorf("server.running = %v, want %v", s.running, true)
 			}
 
-			routes := len(tt.routes) + 9
+			routes := len(tt.routes) + defaultRoutes
 			for _, route := range tt.routes {
 				if route.Handler == nil {
 					routes--
@@ -408,6 +433,325 @@ func TestServer_Mount(t *testing.T) {
 	}
 }
 
+func TestServer_Shutdown(t *testing.T) {
+	tests := []struct {
+		name    string
+		server  Server
+		running bool
+		wantErr bool
+	}{
+		{
+			name:    "Shutdown without running server",
+			server:  New(nil, nil),
+			running: false,
+			wantErr: false,
+		},
+		{
+			name:    "Shutdown with running server",
+			server:  New(nil, nil),
+			running: true,
+			// Want false because we want indempotent behavior
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := tt.server.(*server)
+			s.running = tt.running
+
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer cancel()
+
+			if !tt.wantErr {
+				err := s.Shutdown(ctx)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("server.Shutdown() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			}
+		})
+	}
+}
+
+func TestServer_Restart(t *testing.T) {
+	tests := []struct {
+		name    string
+		server  Server
+		running bool
+		routes  []Route
+		groups  []RouteGroup
+		wantErr bool
+	}{
+		{
+			name:    "Restart without routes",
+			server:  New(nil, nil),
+			running: true,
+			routes:  nil,
+			groups:  nil,
+			wantErr: false,
+		},
+		{
+			name:    "Restart with routes",
+			server:  New(nil, nil),
+			running: true,
+			routes: []Route{
+				{
+					Methods: []string{http.MethodGet},
+					Path:    "/",
+					Handler: func(c fiber.Ctx) error {
+						return c.Status(http.StatusOK).SendString("Hello, World!")
+					},
+				},
+			},
+			groups:  nil,
+			wantErr: false,
+		},
+		{
+			name:    "Restart with invalid route",
+			server:  New(nil, nil),
+			running: true,
+			routes: []Route{
+				{
+					Methods: []string{http.MethodGet},
+					Path:    "",
+					Handler: nil,
+				},
+			},
+			groups:  nil,
+			wantErr: true,
+		},
+		{
+			name:    "Restart with invalid method",
+			server:  New(nil, nil),
+			running: true,
+			routes: []Route{
+				{
+					Methods: []string{"INVALID"},
+					Path:    "/",
+					Handler: func(c fiber.Ctx) error {
+						return c.SendString("Hello, World!")
+					},
+				},
+			},
+			groups:  nil,
+			wantErr: true,
+		},
+		{
+			name:    "Restart with no methods",
+			server:  New(nil, nil),
+			running: true,
+			routes: []Route{
+				{
+					Methods: nil,
+					Path:    "/",
+					Handler: func(c fiber.Ctx) error {
+						return c.SendString("Hello, World!")
+					},
+				},
+			},
+			groups:  nil,
+			wantErr: true,
+		},
+		{
+			name:    "Restart with groups",
+			server:  New(nil, nil),
+			running: true,
+			routes:  nil,
+			groups: []RouteGroup{
+				{
+					Path: "/api",
+					App: fiber.New().Get("/", func(c fiber.Ctx) error {
+						return c.SendString("Hello, World!")
+					}),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "Restart without running server",
+			server:  New(nil, nil),
+			running: false,
+			routes:  nil,
+			groups:  nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := tt.server.(*server)
+			s.running = tt.running
+
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer cancel()
+
+			err := s.Restart(ctx, tt.routes, tt.groups)
+			if (err != nil) != tt.wantErr {
+				if !errors.Is(err, context.DeadlineExceeded) {
+					t.Errorf("server.Restart() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			}
+		})
+	}
+}
+
+func TestServer_App(t *testing.T) {
+	app := fiber.New()
+	tests := []struct {
+		name   string
+		server Server
+		want   *fiber.App
+	}{
+		{
+			name: "Get app",
+			server: &server{
+				app: app,
+			},
+			want: app,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.server.App(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("server.App() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestServer_Mounted(t *testing.T) {
+	tests := []struct {
+		name            string
+		server          Server
+		wantRoutes      int
+		wantGroups      int
+		wantMiddlewares int
+	}{
+		{
+			name: "No routes, groups or middleware mounted",
+			server: &server{
+				routes:      nil,
+				groups:      nil,
+				middlewares: nil,
+			},
+		},
+		{
+			name: "Routes mounted",
+			server: &server{
+				routes: []Route{
+					{
+						Methods: []string{http.MethodGet},
+						Path:    "/",
+						Handler: func(c fiber.Ctx) error {
+							return c.SendString("Hello, World!")
+						},
+					},
+				},
+			},
+			wantRoutes: 1,
+		},
+		{
+			name: "Groups mounted",
+			server: &server{
+				groups: []RouteGroup{
+					{
+						Path: "/api",
+						App: fiber.New().Get("/", func(c fiber.Ctx) error {
+							return c.SendString("Hello, World!")
+						}),
+					},
+				},
+			},
+			wantGroups: 1,
+		},
+		{
+			name: "Middleware mounted",
+			server: &server{
+				middlewares: []fiber.Handler{
+					middleware.Recover(),
+					middleware.Logger(),
+				},
+			},
+			wantMiddlewares: 2,
+		},
+		{
+			name: "Routes, groups and middleware mounted",
+			server: &server{
+				routes: []Route{
+					{
+						Methods: []string{http.MethodGet},
+						Path:    "/",
+						Handler: func(c fiber.Ctx) error {
+							return c.SendString("Hello, World!")
+						},
+					},
+				},
+				groups: []RouteGroup{
+					{
+						Path: "/api",
+						App: fiber.New().Get("/", func(c fiber.Ctx) error {
+							return c.SendString("Hello, World!")
+						}),
+					},
+				},
+				middlewares: []fiber.Handler{
+					middleware.Recover(),
+					middleware.Logger(),
+				},
+			},
+			wantRoutes:      1,
+			wantGroups:      1,
+			wantMiddlewares: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := tt.server.(*server)
+
+			routes, groups, mw := s.Mounted()
+			if len(routes) != tt.wantRoutes {
+				t.Errorf("server.Mounted() routes = %v, want %v", routes, tt.wantRoutes)
+			}
+
+			if len(groups) != tt.wantGroups {
+				t.Errorf("server.Mounted() groups = %v, want %v", groups, tt.wantGroups)
+			}
+
+			if len(mw) != tt.wantMiddlewares {
+				t.Errorf("server.Mounted() middlewares = %v, want %v", mw, tt.wantMiddlewares)
+			}
+		})
+	}
+}
+
+func TestConfig_IsEmpty(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *Config
+		want   bool
+	}{
+		{
+			name:   "Empty config",
+			config: &Config{},
+			want:   true,
+		},
+		{
+			name: "Non-empty config",
+			config: &Config{
+				Address: ":8080",
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.config.IsEmpty(); got != tt.want {
+				t.Errorf("Config.IsEmpty() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -415,13 +759,35 @@ func TestConfig_Validate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "Valid config",
-			config:  &Config{Address: ":8080"},
+			name: "Valid config",
+			config: &Config{
+				Address: ":8080",
+				TLS: TLSConfig{
+					Enabled: false,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid config with TLS",
+			config: &Config{
+				Address: ":8080",
+				TLS: TLSConfig{
+					Enabled:     true,
+					CertFile:    "cert.pem",
+					CertKeyFile: "key.pem",
+				},
+			},
 			wantErr: false,
 		},
 		{
 			name:    "Invalid config",
 			config:  &Config{Address: ""},
+			wantErr: true,
+		},
+		{
+			name:    "Invalid config with TLS",
+			config:  &Config{Address: ":8080", TLS: TLSConfig{Enabled: true}},
 			wantErr: true,
 		},
 	}
@@ -430,6 +796,43 @@ func TestConfig_Validate(t *testing.T) {
 			err := tt.config.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Config.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestOkHandler(t *testing.T) {
+	tests := []struct {
+		name string
+		want int
+	}{
+		{
+			name: "OK handler",
+			want: http.StatusOK,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			app.Get("/", OkHandler)
+
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
+			if err != nil {
+				t.Fatalf("http.NewRequestWithContext() error = %v", err)
+			}
+
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("app.Test() error = %v", err)
+			}
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					t.Fatalf("resp.Body.Close() error = %v", err)
+				}
+			}()
+
+			if resp.StatusCode != tt.want {
+				t.Errorf("OkHandler() = %v, want %v", resp.StatusCode, http.StatusOK)
 			}
 		})
 	}
