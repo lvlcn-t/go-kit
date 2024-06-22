@@ -16,6 +16,7 @@
   - [Lists](#lists)
   - [Executors](#executors)
   - [Metrics](#metrics)
+  - [API Manager](#api-manager)
 - [Code of Conduct](#code-of-conduct)
 - [Working Language](#working-language)
 - [Support and Feedback](#support-and-feedback)
@@ -34,6 +35,7 @@ The library is divided into several packages, each of which provides a different
 - [lists](/lists/lists.go): A collection of functions to work with lists, such as filtering, mapping, and reducing.
 - [executors](/executors/retry.go): Some useful executors to handle common scenarios like retries with exponential backoff.
 - [metrics](/metrics/metrics.go): A simple wrapper around [otel](https://opentelemetry.io/docs/languages/go/getting-started/) to get a trace provider based on the provided configuration.
+- [apimanager](/apimanager/manager.go): A wrapper around [gofiber/fiber](https://github.com/gofiber/fiber) to manage an API server with the ability to add routes, route-groups, and middleware.
 
 ## Installation
 
@@ -214,6 +216,56 @@ func logTraceEvent(ctx context.Context) {
   span.AddEvent("my-event")
   span.SetStatus(codes.Error, "my-error")
   span.RecordError(fmt.Errorf("my-error"))
+}
+```
+
+### API Manager
+
+You can use the `apimanager` package to manage an API server with the ability to add routes, route-groups, and middleware. The package provides a simple API to create an API server with the [gofiber/fiber](https://github.com/gofiber/fiber) framework.
+
+Here is an example of how you can use the `apimanager` package to create an API server with a route, a middleware, and run the server:
+
+```go
+package main
+
+import (
+  "context"
+  "net/http"
+
+  "github.com/gofiber/fiber/v3"
+  "github.com/lvlcn-t/go-kit/apimanager"
+  "github.com/lvlcn-t/loggerhead/logger"
+)
+
+func main() {
+  ctx, cancel := logger.NewContextWithLogger(context.Background())
+  defer cancel()
+  log := logger.FromContext(ctx)
+
+  server := apimanager.New(nil)
+
+  err := server.Mount(apimanager.Route{
+    Path:    "/",
+    Methods: []string{http.MethodGet},
+    Handler: func(c fiber.Ctx) error {
+      return c.Status(http.StatusOK).JSON(fiber.Map{
+        "message": c.Locals("middleware"),
+      })
+    },
+    Middlewares: []fiber.Handler{
+      func(c fiber.Ctx) error {
+        _ = c.Locals("middleware", "Hello, World!")
+        return c.Next()
+      },
+    },
+  })
+  if err != nil {
+    log.FatalContext(ctx, "Failed to mount route", err)
+  }
+
+  if err = server.Run(ctx); err != nil {
+    log.FatalContext(ctx, "Failed to run server", err)
+  }
 }
 ```
 
