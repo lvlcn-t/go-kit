@@ -4,13 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/lvlcn-t/go-kit/apimanager/middleware"
 	"github.com/lvlcn-t/loggerhead/logger"
 )
+
+// shutdownTimeout is the timeout for the server to shut down.
+const shutdownTimeout = 5 * time.Second
 
 type Server interface {
 	// Run runs the server.
@@ -121,7 +126,17 @@ func (s *server) Run(ctx context.Context) error {
 		return err
 	}
 
-	return s.app.Listen(s.config.Address)
+	cErr := make(chan error, 1)
+	go func() {
+		cErr <- s.app.Listen(s.config.Address)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return s.Shutdown(ctx)
+	case err := <-cErr:
+		return err
+	}
 }
 
 // Mount adds the provided routes to the server.
@@ -131,6 +146,22 @@ func (s *server) Mount(routes ...Route) error {
 
 	if s.running {
 		return &ErrAlreadyRunning{}
+	}
+
+	for i := range routes {
+		if len(routes[i].Methods) == 0 {
+			return fmt.Errorf("route %q has no methods", routes[i].Path)
+		}
+
+		for _, method := range routes[i].Methods {
+			if !isValid(strings.ToUpper(method)) {
+				return fmt.Errorf("route %q has invalid method %q", routes[i].Path, method)
+			}
+		}
+
+		if routes[i].Path == "" {
+			return fmt.Errorf("route %q has no path", routes[i].Path)
+		}
 	}
 
 	s.routes = append(s.routes, routes...)
@@ -162,10 +193,6 @@ func (s *server) attachRoutes(ctx context.Context) (err error) {
 	_ = s.router.Use(middleware.Context(ctx))
 	defer func() {
 		if r := recover(); r != nil {
-			if rErr, ok := r.(error); ok {
-				err = rErr
-				return
-			}
 			err = fmt.Errorf("failed to mount routes: %v", r)
 		}
 	}()
@@ -190,5 +217,37 @@ func (s *server) attachRoutes(ctx context.Context) (err error) {
 }
 
 func (s *server) Shutdown(ctx context.Context) error {
-	return s.app.ShutdownWithContext(ctx)
+	c, cancel := newContextWithTimeout(ctx)
+	defer cancel()
+
+	return errors.Join(ctx.Err(), s.app.ShutdownWithContext(c))
+}
+
+// newContextWithTimeout returns a new context with a timeout.
+func newContextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if deadline, ok := ctx.Deadline(); ok {
+		if time.Until(deadline) < shutdownTimeout {
+			return context.WithDeadline(ctx, deadline)
+		}
+	}
+	return context.WithTimeout(ctx, shutdownTimeout)
+}
+
+// isValid checks if the provided method is a valid HTTP method.
+func isValid(method string) bool {
+	switch method {
+	case
+		http.MethodGet,
+		http.MethodHead,
+		http.MethodPost,
+		http.MethodPut,
+		http.MethodPatch,
+		http.MethodDelete,
+		http.MethodConnect,
+		http.MethodOptions,
+		http.MethodTrace:
+		return true
+	default:
+		return false
+	}
 }
