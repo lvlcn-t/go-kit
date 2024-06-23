@@ -46,6 +46,26 @@ func Body[T any](c fiber.Ctx) (T, error) {
 	return v, nil
 }
 
+// Validator is an interface that can be implemented by types that need to be validated.
+type Validator interface {
+	// Validate validates the type and returns an error if it is invalid.
+	Validate() error
+}
+
+// BodyWithValidation returns the body of the request and converts it to the given type, then validates it.
+func BodyWithValidation[T Validator](c fiber.Ctx) (T, error) {
+	data, err := Body[T](c)
+	if err != nil {
+		return data, err
+	}
+
+	if err := data.Validate(); err != nil {
+		return data, err
+	}
+
+	return data, nil
+}
+
 // parseParam parses a parameter from a context using the given getter and parser.
 func parseParam[T any](name string, get func(string, ...string) string, parse func(string) (T, error)) (T, error) {
 	var empty T

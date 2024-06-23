@@ -347,7 +347,7 @@ func Test_parseParam_notString(t *testing.T) {
 	}
 }
 
-func Test_Body(t *testing.T) {
+func TestBody(t *testing.T) {
 	tests := []struct {
 		name    string
 		body    func(t *testing.T) io.Reader
@@ -384,6 +384,90 @@ func Test_Body(t *testing.T) {
 				}
 
 				if !tt.wantErr && v["name"] != testVal {
+					t.Errorf("want %v, got %v", testVal, v)
+					return c.SendStatus(http.StatusInternalServerError)
+				}
+				return c.SendStatus(http.StatusOK)
+			})
+
+			req := newTestRequest(t, url{Path: "/"}, nil, tt.body(t), nil)
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("failed to test app: %v", err)
+			}
+			defer func() {
+				err := resp.Body.Close()
+				if err != nil {
+					t.Fatalf("failed to close response body: %v", err)
+				}
+			}()
+
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("want status code %v, got %v", http.StatusOK, resp.StatusCode)
+			}
+		})
+	}
+}
+
+type body struct {
+	Name string `json:"name"`
+}
+
+func (b *body) Validate() error {
+	if b.Name == "" {
+		return fmt.Errorf("name is empty")
+	}
+	return nil
+}
+
+func TestBodyWithValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		body    func(t *testing.T) io.Reader
+		wantErr bool
+	}{
+		{
+			name: "success",
+			body: func(t *testing.T) io.Reader {
+				b, err := json.Marshal(map[string]string{"name": testVal})
+				if err != nil {
+					t.Fatalf("failed to marshal json: %v", err)
+				}
+				return bytes.NewReader(b)
+			},
+			wantErr: false,
+		},
+		{
+			name: "fail - invalid json",
+			body: func(t *testing.T) io.Reader {
+				return bytes.NewReader([]byte("invalid"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "fail - validation error",
+			body: func(t *testing.T) io.Reader {
+				b, err := json.Marshal(map[string]string{"name": ""})
+				if err != nil {
+					t.Fatalf("failed to marshal json: %v", err)
+				}
+				return bytes.NewReader(b)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			app.Post("/", func(c fiber.Ctx) error {
+				v, err := BodyWithValidation[*body](c)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("want error %v, got %v", tt.wantErr, err)
+					return c.SendStatus(http.StatusInternalServerError)
+				}
+
+				if !tt.wantErr && v.Name != testVal {
 					t.Errorf("want %v, got %v", testVal, v)
 					return c.SendStatus(http.StatusInternalServerError)
 				}
