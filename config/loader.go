@@ -47,13 +47,21 @@ type Fallback func() (string, error)
 //	func (c Config) IsEmpty() bool {
 //		return c == (Config{})
 //	}
+//
+// Note: If the configuration is a pointer to a struct, the experimental feature behind viper.ExperimentalBindStruct() will not be used.
 func Load[T Settings](path string, fallbacks ...Fallback) (cfg T, err error) {
 	k := reflect.TypeOf(cfg).Kind()
 	if k != reflect.Struct && k != reflect.Pointer {
 		return cfg, errors.New("configuration must be a struct or a pointer to a struct")
 	}
 
-	v := viper.New()
+	var opts []viper.Option
+	// The feature behind this option only works on direct struct values (not pointers)
+	if k != reflect.Pointer {
+		opts = append(opts, viper.ExperimentalBindStruct())
+	}
+
+	v := viper.NewWithOptions(opts...)
 	v.SetFs(fsys)
 	if path == "" {
 		if len(fallbacks) == 0 {
@@ -71,9 +79,9 @@ func Load[T Settings](path string, fallbacks ...Fallback) (cfg T, err error) {
 	}
 	v.SetConfigFile(path)
 
-	v.AutomaticEnv()
 	v.SetEnvPrefix(strings.ToUpper(strings.ReplaceAll(bin, "-", "_")))
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
+	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(*fs.PathError); !ok {
