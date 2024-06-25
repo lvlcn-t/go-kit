@@ -83,11 +83,13 @@ func parseParam[T any](name string, get func(string, ...string) string, parse fu
 	return parse(v)
 }
 
+// Client represents a client that made a request.
 type Client struct {
 	ip   string
 	port string
 }
 
+// NewClient creates a new client from the given context.
 func NewClient(c fiber.Ctx) Client {
 	return Client{
 		ip:   c.IP(),
@@ -95,14 +97,17 @@ func NewClient(c fiber.Ctx) Client {
 	}
 }
 
+// String returns the client as a string in the format "ip:port".
 func (b *Client) String() string {
 	return fmt.Sprintf("%s:%s", b.ip, b.port)
 }
 
+// IP returns the IP of the client.
 func (b *Client) IP() IP {
 	return IP(net.ParseIP(b.ip))
 }
 
+// Port returns the port of the client.
 func (b *Client) Port() Port {
 	v, err := strconv.Atoi(b.port)
 	if err != nil {
@@ -111,22 +116,28 @@ func (b *Client) Port() Port {
 	return Port(v)
 }
 
+// IP represents an IP address.
 type IP net.IP
 
+// String returns the IP as a string.
 func (i IP) String() string {
 	return net.IP(i).String()
 }
 
+// Get returns the IP as a [net.IP].
 func (i IP) Get() net.IP {
 	return net.IP(i)
 }
 
+// Port represents a port number.
 type Port uint16
 
+// String returns the port as a string.
 func (p Port) String() string {
 	return strconv.Itoa(int(p))
 }
 
+// Get returns the port as a uint16.
 func (p Port) Get() uint16 {
 	return uint16(p)
 }

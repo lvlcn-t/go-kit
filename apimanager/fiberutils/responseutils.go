@@ -3,7 +3,9 @@ package fiberutils
 import (
 	"net/http"
 
+	"github.com/a-h/templ"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
 )
 
 // NewErrorResponse creates a new error response.
@@ -56,4 +58,14 @@ func InternalServerErrorResponse(c fiber.Ctx, msg string, ctype ...string) error
 // If ctype is not given, The Content-Type header will be set to application/json.
 func ServiceUnavailableResponse(c fiber.Ctx, msg string, ctype ...string) error {
 	return c.Status(http.StatusServiceUnavailable).JSON(NewErrorResponse(msg, http.StatusServiceUnavailable), ctype...)
+}
+
+// RenderView renders a templ component.
+// If the options parameter is given, this method will apply the options to the component handler before rendering.
+func RenderView(c fiber.Ctx, component templ.Component, options ...func(*templ.ComponentHandler)) error {
+	handler := templ.Handler(component)
+	for _, o := range options {
+		o(handler)
+	}
+	return adaptor.HTTPHandler(handler)(c)
 }
