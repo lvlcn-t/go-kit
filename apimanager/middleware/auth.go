@@ -147,7 +147,12 @@ func AuthorizeWithClaims[T any](key string, roles ...string) fiber.Handler {
 			return fiberutils.ForbiddenResponse(c, "no claims found")
 		}
 
-		claimRoles := getRolesFromClaims(claims, key)
+		claimRoles, err := getRolesFromClaims(claims, key)
+		if err != nil {
+			log.ErrorContext(c.Context(), "Failed to get roles from claims", "error", err)
+			return fiberutils.InternalServerErrorResponse(c, "failed to get roles from claims")
+		}
+
 		roleMap := make(map[string]bool)
 		for _, role := range claimRoles {
 			roleMap[role] = true
@@ -186,10 +191,7 @@ func extractToken(c fiber.Ctx) (string, error) {
 //
 // For a map, the key is used directly to retrieve the value, which must be a slice of strings.
 //
-// This function panics if:
-//   - The claims are neither a struct nor a map.
-//   - The specified key does not correspond to any field or map entry.
-//   - The identified field or map entry is not a slice of strings.
+// Returns an error if the claims are not a struct or map, the field is not found, or the field is not a slice of strings.
 //
 // Example with a struct:
 //
@@ -198,15 +200,21 @@ func extractToken(c fiber.Ctx) (string, error) {
 //	}
 //
 //	claims := UserClaims{Roles: []string{"admin", "user"}}
-//	roles := getRolesFromClaims(claims, "roles")
+//	roles, err := getRolesFromClaims(claims, "roles")
+//	if err != nil {
+//		panic(err)
+//	}
 //	fmt.Println(roles) // Output: [admin, user]
 //
 // Example with a map:
 //
 //	claimsMap := map[string]any{"roles": []string{"admin", "user"}}
-//	roles := getRolesFromClaims(claimsMap, "roles")
+//	roles, err := getRolesFromClaims(claimsMap, "roles")
+//	if err != nil {
+//		panic(err)
+//	}
 //	fmt.Println(roles) // Output: [admin, user]
-func getRolesFromClaims[T any](claims T, key string) []string {
+func getRolesFromClaims(claims any, key string) ([]string, error) {
 	v := reflect.ValueOf(claims)
 	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
@@ -229,15 +237,15 @@ func getRolesFromClaims[T any](claims T, key string) []string {
 	case reflect.Map:
 		field = v.MapIndex(reflect.ValueOf(key))
 	default:
-		panic(fmt.Sprintf("claims must be a struct or map, got %v", v.Kind()))
+		return nil, fmt.Errorf("claims must be a struct or map, got %v", v.Kind())
 	}
 
 	if !field.IsValid() {
-		panic(fmt.Sprintf("field %q not found in claims", key))
+		return nil, fmt.Errorf("field %q not found in claims", key)
 	}
 
 	if field.Kind() != reflect.Slice {
-		panic(fmt.Sprintf("field %q is not a slice, got %v", key, field.Kind()))
+		return nil, fmt.Errorf("field %q is not a slice, got %v", key, field.Kind())
 	}
 
 	roles := make([]string, field.Len())
@@ -245,5 +253,5 @@ func getRolesFromClaims[T any](claims T, key string) []string {
 		roles[i] = field.Index(i).Interface().(string)
 	}
 
-	return roles
+	return roles, nil
 }
