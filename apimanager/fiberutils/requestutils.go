@@ -1,11 +1,10 @@
 package fiberutils
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -38,10 +37,8 @@ func Header[T any](c fiber.Ctx, name string, parse func(string) (T, error)) (T, 
 // Body returns the body of the request and converts it to the given type.
 func Body[T any](c fiber.Ctx) (T, error) {
 	var v T
-	decoder := json.NewDecoder(bytes.NewReader(c.Body()))
-	err := decoder.Decode(&v)
-	if err != nil {
-		return v, fmt.Errorf("failed to parse request body into %T: %w", v, err)
+	if err := c.Bind().Body(&v); err != nil {
+		return v, err
 	}
 	return v, nil
 }
@@ -140,4 +137,61 @@ func (p Port) String() string {
 // Get returns the port as a uint16.
 func (p Port) Get() uint16 {
 	return uint16(p)
+}
+
+// ParseDate returns a parser that parses a date string into a time.Time using the given formats.
+// The first format that successfully parses the date will be used.
+// If no formats are provided, the default format [time.DateOnly] will be used.
+func ParseDate(format ...string) func(string) (time.Time, error) {
+	if len(format) == 0 {
+		format = append(format, time.DateOnly)
+	}
+
+	return func(s string) (t time.Time, err error) {
+		for _, f := range format {
+			t, err = time.Parse(f, s)
+			if err == nil {
+				return t, nil
+			}
+		}
+		return t, err
+	}
+}
+
+// ParseTime returns a parser that parses a time string into a time.Time using the given formats.
+// The first format that successfully parses the time will be used.
+// If no formats are provided, the default format [time.TimeOnly] will be used.
+func ParseTime(format ...string) func(string) (time.Time, error) {
+	if len(format) == 0 {
+		format = append(format, time.TimeOnly)
+	}
+
+	return func(s string) (t time.Time, err error) {
+		for _, f := range format {
+			t, err = time.Parse(f, s)
+			if err == nil {
+				return t, nil
+			}
+		}
+		return t, err
+	}
+}
+
+// ParseDateTime returns a parser that parses a date and time string into a time.Time using the given formats.
+// The first format that successfully parses the date and time will be used.
+// If no formats are provided, the default format [time.RFC3339] will be used.
+func ParseDateTime(format ...string) func(string) (time.Time, error) {
+	if len(format) == 0 {
+		format = append(format, time.RFC3339)
+	}
+
+	return func(s string) (t time.Time, err error) {
+		for _, f := range format {
+			t, err = time.Parse(f, s)
+			if err == nil {
+				return t, nil
+			}
+		}
+		return t, err
+	}
 }
