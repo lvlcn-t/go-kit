@@ -23,7 +23,8 @@ func Context(ctx context.Context) fiber.Handler {
 // Logger logs the request if the path is not ignored.
 func Logger(ignore ...string) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		log := logger.FromContext(c.UserContext())
+		log := logger.FromContext(c.UserContext()).With("method", c.Method(), "path", c.Path())
+		c.SetUserContext(logger.IntoContext(c.UserContext(), log))
 		if !slices.Contains(ignore, c.Path()) {
 			log.InfoContext(c.Context(), "Request received", "ip", c.IP(), "method", c.Method(), "path", c.Path())
 		}
