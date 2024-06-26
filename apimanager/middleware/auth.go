@@ -180,9 +180,32 @@ func extractToken(c fiber.Ctx) (string, error) {
 }
 
 // getRolesFromClaims extracts roles from the provided claims.
-// The claims must be a struct or map with a field named with the provided key and a slice of strings.
-// Panics if the claims are not a struct or map, the key is not found, or the field is not a slice of strings.
-// Returns the roles as a slice of strings.
+//
+// For a struct, it attempts to find a field tagged with `json` that matches the provided key. If no tagged field is found,
+// it falls back to matching the field name directly with the key. The field must be a slice of strings.
+//
+// For a map, the key is used directly to retrieve the value, which must be a slice of strings.
+//
+// This function panics if:
+//   - The claims are neither a struct nor a map.
+//   - The specified key does not correspond to any field or map entry.
+//   - The identified field or map entry is not a slice of strings.
+//
+// Example with a struct:
+//
+//	type UserClaims struct {
+//		Roles []string `json:"roles"`
+//	}
+//
+//	claims := UserClaims{Roles: []string{"admin", "user"}}
+//	roles := getRolesFromClaims(claims, "roles")
+//	fmt.Println(roles) // Output: [admin, user]
+//
+// Example with a map:
+//
+//	claimsMap := map[string]any{"roles": []string{"admin", "user"}}
+//	roles := getRolesFromClaims(claimsMap, "roles")
+//	fmt.Println(roles) // Output: [admin, user]
 func getRolesFromClaims[T any](claims T, key string) []string {
 	v := reflect.ValueOf(claims)
 	if v.Kind() == reflect.Pointer {
@@ -192,7 +215,17 @@ func getRolesFromClaims[T any](claims T, key string) []string {
 	var field reflect.Value
 	switch v.Kind() {
 	case reflect.Struct:
-		field = v.FieldByName(key)
+		for i := 0; i < v.NumField(); i++ {
+			if v.Type().Field(i).Tag.Get("json") == key {
+				field = v.Field(i)
+				break
+			}
+
+			if v.Type().Field(i).Name == key {
+				field = v.Field(i)
+				break
+			}
+		}
 	case reflect.Map:
 		field = v.MapIndex(reflect.ValueOf(key))
 	default:
