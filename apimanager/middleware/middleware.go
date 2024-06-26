@@ -44,19 +44,3 @@ func Recover() fiber.Handler {
 		return c.Next()
 	}
 }
-
-// Authenticate checks if the request is authenticated.
-func Authenticate() fiber.Handler {
-	// TODO: Implement authentication logic.
-	return func(c fiber.Ctx) error {
-		return c.Next()
-	}
-}
-
-// Authorize checks if the request is authorized.
-func Authorize() fiber.Handler {
-	// TODO: Implement authorization logic.
-	return func(c fiber.Ctx) error {
-		return c.Next()
-	}
-}
