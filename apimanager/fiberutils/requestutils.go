@@ -3,40 +3,48 @@ package fiberutils
 import (
 	"fmt"
 	"net"
+	"reflect"
 	"strconv"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 // Params returns the parameter with the given name from the context and converts it to the given type.
-func Params[T any](c fiber.Ctx, name string, parse func(string) (T, error)) (T, error) {
+func Params[T any](c fiber.Ctx, name string, parse Parser[T]) (T, error) {
 	return parseParam(name, c.Params, parse)
 }
 
 // Query returns the query parameter with the given name from the context and converts it to the given type.
-func Query[T any](c fiber.Ctx, name string, parse func(string) (T, error)) (T, error) {
+func Query[T any](c fiber.Ctx, name string, parse Parser[T]) (T, error) {
 	return parseParam(name, c.Query, parse)
 }
 
 // Cookies returns the cookie with the given name from the context and converts it to the given type.
-func Cookies[T any](c fiber.Ctx, name string, parse func(string) (T, error)) (T, error) {
+func Cookies[T any](c fiber.Ctx, name string, parse Parser[T]) (T, error) {
 	return parseParam(name, c.Cookies, parse)
 }
 
 // Form returns the form value with the given name from the context and converts it to the given type.
-func Form[T any](c fiber.Ctx, name string, parse func(string) (T, error)) (T, error) {
+func Form[T any](c fiber.Ctx, name string, parse Parser[T]) (T, error) {
 	return parseParam(name, c.FormValue, parse)
 }
 
 // Header returns the request header with the given name from the context and converts it to the given type.
-func Header[T any](c fiber.Ctx, name string, parse func(string) (T, error)) (T, error) {
+func Header[T any](c fiber.Ctx, name string, parse Parser[T]) (T, error) {
 	return parseParam(name, c.Get, parse)
 }
 
 // Body returns the body of the request and converts it to the given type.
 func Body[T any](c fiber.Ctx) (T, error) {
 	var v T
+	if reflect.TypeOf(v).Kind() == reflect.Map {
+		v = reflect.MakeMap(reflect.TypeOf(v)).Interface().(T)
+	}
+
+	if reflect.TypeOf(v).Kind() == reflect.Ptr {
+		v = reflect.New(reflect.TypeOf(v).Elem()).Interface().(T)
+	}
+
 	if err := c.Bind().Body(&v); err != nil {
 		return v, err
 	}
@@ -64,7 +72,7 @@ func BodyWithValidation[T Validator](c fiber.Ctx) (T, error) {
 }
 
 // parseParam parses a parameter from a context using the given getter and parser.
-func parseParam[T any](name string, get func(string, ...string) string, parse func(string) (T, error)) (T, error) {
+func parseParam[T any](name string, get func(string, ...string) string, parse Parser[T]) (T, error) {
 	var empty T
 	v := get(name)
 	if v == "" {
@@ -137,61 +145,4 @@ func (p Port) String() string {
 // Get returns the port as a uint16.
 func (p Port) Get() uint16 {
 	return uint16(p)
-}
-
-// ParseDate returns a parser that parses a date string into a time.Time using the given formats.
-// The first format that successfully parses the date will be used.
-// If no formats are provided, the default format [time.DateOnly] will be used.
-func ParseDate(format ...string) func(string) (time.Time, error) {
-	if len(format) == 0 {
-		format = append(format, time.DateOnly)
-	}
-
-	return func(s string) (t time.Time, err error) {
-		for _, f := range format {
-			t, err = time.Parse(f, s)
-			if err == nil {
-				return t, nil
-			}
-		}
-		return t, err
-	}
-}
-
-// ParseTime returns a parser that parses a time string into a time.Time using the given formats.
-// The first format that successfully parses the time will be used.
-// If no formats are provided, the default format [time.TimeOnly] will be used.
-func ParseTime(format ...string) func(string) (time.Time, error) {
-	if len(format) == 0 {
-		format = append(format, time.TimeOnly)
-	}
-
-	return func(s string) (t time.Time, err error) {
-		for _, f := range format {
-			t, err = time.Parse(f, s)
-			if err == nil {
-				return t, nil
-			}
-		}
-		return t, err
-	}
-}
-
-// ParseDateTime returns a parser that parses a date and time string into a time.Time using the given formats.
-// The first format that successfully parses the date and time will be used.
-// If no formats are provided, the default format [time.RFC3339] will be used.
-func ParseDateTime(format ...string) func(string) (time.Time, error) {
-	if len(format) == 0 {
-		format = append(format, time.RFC3339)
-	}
-
-	return func(s string) (t time.Time, err error) {
-		for _, f := range format {
-			t, err = time.Parse(f, s)
-			if err == nil {
-				return t, nil
-			}
-		}
-		return t, err
-	}
 }

@@ -18,7 +18,7 @@ import (
 
 const testVal = "value"
 
-type ctxValueGetter[T any] func(fiber.Ctx, string, func(string) (T, error)) (T, error)
+type ctxValueGetter[T any] func(fiber.Ctx, string, Parser[T]) (T, error)
 
 type url struct {
 	Path  string
@@ -30,7 +30,7 @@ func Test_ContextValueGetter(t *testing.T) {
 	tests := []struct {
 		name    string
 		fun     ctxValueGetter[string]
-		parse   func(string) (string, error)
+		parse   Parser[string]
 		url     url
 		body    io.Reader
 		header  http.Header
@@ -384,13 +384,15 @@ func TestBody(t *testing.T) {
 				}
 
 				if !tt.wantErr && v["name"] != testVal {
-					t.Errorf("want %v, got %v", testVal, v)
+					t.Errorf("want %q, got %q", testVal, v["name"])
 					return c.SendStatus(http.StatusInternalServerError)
 				}
 				return c.SendStatus(http.StatusOK)
 			})
 
-			req := newTestRequest(t, url{Path: "/"}, nil, tt.body(t), nil)
+			header := http.Header{}
+			header.Set("Content-Type", "application/json")
+			req := newTestRequest(t, url{Path: "/"}, header, tt.body(t), nil)
 			resp, err := app.Test(req)
 			if err != nil {
 				t.Fatalf("failed to test app: %v", err)
@@ -403,7 +405,7 @@ func TestBody(t *testing.T) {
 			}()
 
 			if resp.StatusCode != http.StatusOK {
-				t.Errorf("want status code %v, got %v", http.StatusOK, resp.StatusCode)
+				t.Errorf("want status code %d, got %d", http.StatusOK, resp.StatusCode)
 			}
 		})
 	}
@@ -474,7 +476,9 @@ func TestBodyWithValidation(t *testing.T) {
 				return c.SendStatus(http.StatusOK)
 			})
 
-			req := newTestRequest(t, url{Path: "/"}, nil, tt.body(t), nil)
+			header := http.Header{}
+			header.Set("Content-Type", "application/json")
+			req := newTestRequest(t, url{Path: "/"}, header, tt.body(t), nil)
 			resp, err := app.Test(req)
 			if err != nil {
 				t.Fatalf("failed to test app: %v", err)
@@ -487,7 +491,7 @@ func TestBodyWithValidation(t *testing.T) {
 			}()
 
 			if resp.StatusCode != http.StatusOK {
-				t.Errorf("want status code %v, got %v", http.StatusOK, resp.StatusCode)
+				t.Errorf("want status code %d, got %d", http.StatusOK, resp.StatusCode)
 			}
 		})
 	}
@@ -654,7 +658,7 @@ func newTestRequest(t *testing.T, url url, header http.Header, body io.Reader, c
 		req.Header = header
 	}
 
-	if body != nil && body != http.NoBody {
+	if body != nil && body != http.NoBody && req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 
