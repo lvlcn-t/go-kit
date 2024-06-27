@@ -14,11 +14,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-//go:generate moq -out auth_moq.go . verifier
-type verifier interface {
-	Verify(ctx context.Context, token string) (*oidc.IDToken, error)
-}
-
 // AuthProvider represents an OIDC provider.
 type AuthProvider struct {
 	// verifier is used to verify ID tokens.
@@ -116,7 +111,8 @@ func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
 			return fiberutils.UnauthorizedResponse(c, err.Error())
 		}
 
-		idToken, err := provider.verifier.Verify(c.Context(), token)
+		var idToken tokenUnmarshaler
+		idToken, err = provider.verifier.Verify(c.Context(), token)
 		if err != nil {
 			log.DebugContext(c.Context(), "Failed to verify token", "error", err)
 			return fiberutils.UnauthorizedResponse(c, "invalid token")
@@ -254,4 +250,46 @@ func getRolesFromClaims(claims any, key string) ([]string, error) {
 	}
 
 	return roles, nil
+}
+
+//go:generate moq -out auth_verifier_moq.go . verifier
+type verifier interface {
+	// Verify parses a raw ID Token, verifies it's been signed by the provider, performs
+	// any additional checks depending on the Config, and returns the payload.
+	//
+	// Verify does NOT do nonce validation, which is the callers responsibility.
+	//
+	// See: https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
+	//
+	//	oauth2Token, err := oauth2Config.Exchange(ctx, r.URL.Query().Get("code"))
+	//	if err != nil {
+	//	    // handle error
+	//	}
+	//
+	//	// Extract the ID Token from oauth2 token.
+	//	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
+	//	if !ok {
+	//	    // handle error
+	//	}
+	//
+	//	token, err := verifier.Verify(ctx, rawIDToken)
+	Verify(ctx context.Context, token string) (*oidc.IDToken, error)
+}
+
+//go:generate moq -out auth_unmarshaler_moq.go . tokenUnmarshaler
+type tokenUnmarshaler interface {
+	// Claims unmarshals the raw JSON payload of the ID Token into a provided struct.
+	//
+	//	idToken, err := idTokenVerifier.Verify(rawIDToken)
+	//	if err != nil {
+	//		// handle error
+	//	}
+	//	var claims struct {
+	//		Email         string `json:"email"`
+	//		EmailVerified bool   `json:"email_verified"`
+	//	}
+	//	if err := idToken.Claims(&claims); err != nil {
+	//		// handle error
+	//	}
+	Claims(claims any) error
 }
