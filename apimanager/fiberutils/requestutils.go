@@ -41,7 +41,7 @@ func Body[T any](c fiber.Ctx) (T, error) {
 		v = reflect.MakeMap(reflect.TypeOf(v)).Interface().(T)
 	}
 
-	if reflect.TypeOf(v).Kind() == reflect.Ptr {
+	if reflect.TypeOf(v).Kind() == reflect.Pointer {
 		v = reflect.New(reflect.TypeOf(v).Elem()).Interface().(T)
 	}
 
