@@ -171,17 +171,19 @@ func TestServer_Run(t *testing.T) {
 	const defaultRoutes = (1 * 9) // 1 route * 9 methods
 
 	tests := []struct {
-		name     string
-		server   Server
-		routes   []Route
-		wantErr  bool
-		runTwice bool
+		name       string
+		server     Server
+		routes     []Route
+		wantErr    bool
+		runTwice   bool
+		wantRoutes int
 	}{
 		{
-			name:    "Run without routes",
-			server:  New(nil, nil),
-			routes:  nil,
-			wantErr: false,
+			name:       "Run without routes",
+			server:     New(nil, nil),
+			routes:     nil,
+			wantErr:    false,
+			wantRoutes: defaultRoutes,
 		},
 		{
 			name:   "Run with routes",
@@ -195,7 +197,42 @@ func TestServer_Run(t *testing.T) {
 					},
 				},
 			},
+			wantErr:    false,
+			wantRoutes: 1 + defaultRoutes,
+		},
+		{
+			name:   "Run with USE route",
+			server: New(nil, nil),
+			routes: []Route{
+				{
+					Methods: []string{MethodUse},
+					Path:    "/",
+					Handler: func(c fiber.Ctx) error {
+						return c.Status(http.StatusOK).SendString("Hello, World!")
+					},
+				},
+			},
 			wantErr: false,
+			// Since a USE route is the next in the chain of global middleware, it will be added to the routes
+			wantRoutes: defaultRoutes,
+		},
+		{
+			name:   "Run with USE route and middleware",
+			server: New(nil, nil),
+			routes: []Route{
+				{
+					Methods: []string{MethodUse},
+					Path:    "/",
+					Handler: func(c fiber.Ctx) error {
+						return c.Status(http.StatusOK).SendString("Hello, World!")
+					},
+					Middlewares: []fiber.Handler{
+						middleware.Recover(),
+					},
+				},
+			},
+			wantErr:    false,
+			wantRoutes: defaultRoutes,
 		},
 		{
 			name:   "Run with invalid route",
@@ -207,7 +244,8 @@ func TestServer_Run(t *testing.T) {
 					Handler: nil,
 				},
 			},
-			wantErr: true,
+			wantErr:    true,
+			wantRoutes: defaultRoutes,
 		},
 		{
 			name:   "Try to run server twice",
@@ -221,8 +259,9 @@ func TestServer_Run(t *testing.T) {
 					},
 				},
 			},
-			runTwice: true,
-			wantErr:  true,
+			runTwice:   true,
+			wantErr:    true,
+			wantRoutes: 1 + defaultRoutes,
 		},
 	}
 
@@ -256,15 +295,8 @@ func TestServer_Run(t *testing.T) {
 				t.Errorf("server.running = %v, want %v", s.running, true)
 			}
 
-			routes := len(tt.routes) + defaultRoutes
-			for _, route := range tt.routes {
-				if route.Handler == nil {
-					routes--
-				}
-			}
-
-			if len(s.app.GetRoutes()) != routes {
-				t.Errorf("server.app.routes = %v, want %v", len(s.app.GetRoutes()), routes)
+			if len(s.app.GetRoutes()) != tt.wantRoutes {
+				t.Errorf("server.app.routes = %v, want %v", len(s.app.GetRoutes()), tt.wantRoutes)
 			}
 			s.mu.Unlock()
 
@@ -395,6 +427,36 @@ func TestServer_Mount(t *testing.T) {
 			},
 			wantErr:    false,
 			wantRoutes: 1,
+		},
+		{
+			name:   "Mount with USE method",
+			server: New(nil, nil),
+			routes: []Route{
+				{
+					Path:    "/",
+					Methods: []string{MethodUse},
+					Handler: func(c fiber.Ctx) error {
+						return c.SendString("Hello, World!")
+					},
+				},
+			},
+			wantErr:    false,
+			wantRoutes: 1,
+		},
+		{
+			name:   "Mount with USE method and other methods",
+			server: New(nil, nil),
+			routes: []Route{
+				{
+					Path:    "/",
+					Methods: []string{MethodUse, http.MethodGet},
+					Handler: func(c fiber.Ctx) error {
+						return c.SendString("Hello, World!")
+					},
+				},
+			},
+			wantErr:    true,
+			wantRoutes: 0,
 		},
 	}
 
