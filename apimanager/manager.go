@@ -15,8 +15,12 @@ import (
 	"github.com/lvlcn-t/loggerhead/logger"
 )
 
-// shutdownTimeout is the timeout for the server to shut down.
-const shutdownTimeout = 15 * time.Second
+const (
+	// MethodUse is a custom HTTP method to indicate that a route should be registered for all HTTP methods.
+	MethodUse = "USE"
+	// shutdownTimeout is the timeout for the server to shut down.
+	shutdownTimeout = 15 * time.Second
+)
 
 type Server interface {
 	// Run attaches all previously mounted routes and starts the server.
@@ -55,6 +59,8 @@ type Route struct {
 	// Path is the path of the route.
 	Path string
 	// Methods is the HTTP method of the route.
+	// To register the route to all http methods, use [MethodUse].
+	// [MethodUse] is mutually exclusive with other methods.
 	Methods []string
 	// Handler is the handler function of the route.
 	Handler fiber.Handler
@@ -219,10 +225,20 @@ func (s *server) Mount(routes ...Route) error {
 			return fmt.Errorf("route %q has no methods", routes[i].Path)
 		}
 
+		hasUse := false
 		for _, method := range routes[i].Methods {
+			if method == MethodUse {
+				hasUse = true
+				break
+			}
+
 			if !isValid(strings.ToUpper(method)) {
 				return fmt.Errorf("route %q has invalid method %q", routes[i].Path, method)
 			}
+		}
+
+		if hasUse && len(routes[i].Methods) > 1 {
+			return fmt.Errorf("route %q has method %q and other methods: %v", routes[i].Path, MethodUse, routes[i].Methods)
 		}
 
 		if routes[i].Path == "" {
