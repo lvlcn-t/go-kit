@@ -292,13 +292,17 @@ func (s *server) attachRoutes(ctx context.Context) (err error) {
 		_ = s.router.Use(group.Path, group.App)
 	}
 
+	if s.config.UseDefaultHealthz {
+		s.routes = append(s.routes, Route{
+			Path:    "/healthz",
+			Methods: []string{http.MethodGet},
+			Handler: OkHandler,
+		})
+	}
+
 	for _, route := range s.routes {
 		logger.FromContext(ctx).InfoContext(ctx, "Mounting route", "path", route.Path, "methods", strings.Join(route.Methods, ","))
 		_ = s.router.Add(route.Methods, route.Path, route.Handler, route.Middlewares...)
-	}
-
-	if s.config.UseDefaultHealthz {
-		_ = s.router.Get("/healthz", OkHandler)
 	}
 
 	s.running = true

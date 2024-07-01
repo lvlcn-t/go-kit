@@ -248,6 +248,13 @@ func TestServer_Run(t *testing.T) {
 			wantRoutes: defaultRoutes,
 		},
 		{
+			name:       "Run with default healthz route",
+			server:     New(&Config{UseDefaultHealthz: true}, nil),
+			routes:     nil,
+			wantErr:    false,
+			wantRoutes: defaultRoutes + 1,
+		},
+		{
 			name:   "Try to run server twice",
 			server: New(nil, nil),
 			routes: []Route{
