@@ -16,7 +16,7 @@ type config struct {
 }
 
 func (c config) IsEmpty() bool {
-	return c == (config{})
+	return reflect.DeepEqual(c, config{})
 }
 
 func TestLoad(t *testing.T) {
@@ -105,6 +105,50 @@ func TestLoad_InvalidType(t *testing.T) {
 	_, err := Load[invalid]("testdata/config.yaml")
 	if err == nil {
 		t.Error("Load() error = nil, want error")
+	}
+}
+
+func TestLoad_Pointer(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		want    Settings
+		wantErr bool
+	}{
+		{
+			name: "pointer",
+			path: "testdata/config.yaml",
+			want: &config{
+				Host: "localhost",
+				Port: 8080,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "nil pointer",
+			path:    "testdata/config.yaml",
+			want:    (*config)(nil),
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setup(t, tt.path, tt.want)
+			if reflect.ValueOf(tt.want).IsNil() {
+				tt.want = &config{}
+			}
+
+			got, err := Load[*config](tt.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if err == nil && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Load() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 

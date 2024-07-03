@@ -50,18 +50,12 @@ type Fallback func() (string, error)
 //
 // Note: If the configuration is a pointer to a struct, the experimental feature behind viper.ExperimentalBindStruct() will not be used.
 func Load[T Settings](path string, fallbacks ...Fallback) (cfg T, err error) {
-	k := reflect.TypeOf(cfg).Kind()
-	if k != reflect.Struct && k != reflect.Pointer {
-		return cfg, errors.New("configuration must be a struct or a pointer to a struct")
+	cfg, err = ensureStruct(cfg)
+	if err != nil {
+		return cfg, fmt.Errorf("given type is not a struct: %w", err)
 	}
 
-	var opts []viper.Option
-	// The feature behind this option only works on direct struct values (not pointers)
-	if k != reflect.Pointer {
-		opts = append(opts, viper.ExperimentalBindStruct())
-	}
-
-	v := viper.NewWithOptions(opts...)
+	v := viper.NewWithOptions(viper.ExperimentalBindStruct())
 	v.SetFs(fsys)
 	if path == "" {
 		if len(fallbacks) == 0 {
@@ -120,4 +114,24 @@ func defaultFallback() (string, error) {
 		return "", fmt.Errorf("failed to get user home directory: %w", err)
 	}
 	return filepath.Join(home, bin, "config.yaml"), nil
+}
+
+// ensureStruct ensures that the provided value is a struct or a pointer to a struct.
+func ensureStruct[T any](value T) (T, error) {
+	var empty T
+	t := reflect.TypeOf(value)
+
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+
+	if t.Kind() != reflect.Struct {
+		return empty, errors.New("value must be a struct or a pointer to a struct")
+	}
+
+	if reflect.TypeOf(value).Kind() == reflect.Pointer && reflect.ValueOf(value).IsNil() {
+		return reflect.New(t).Interface().(T), nil
+	}
+
+	return value, nil
 }
