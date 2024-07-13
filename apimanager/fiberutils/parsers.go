@@ -11,19 +11,19 @@ import (
 // Parser is a function that parses a string into a value of the given type.
 type Parser[T any] func(string) (T, error)
 
-// ParseInt returns a parser that parses an integer string into the given type.
+// ParseInt parses an integer string into the given signed type.
 func ParseInt[T constraints.Signed](s string) (T, error) {
 	v, err := strconv.ParseInt(s, 10, getBitSize(T(0)))
 	return T(v), err
 }
 
-// ParseUint returns a parser that parses an unsigned integer string into the given type.
+// ParseUint parses an unsigned integer string into the given unsigned type.
 func ParseUint[T constraints.Unsigned](s string) (T, error) {
 	v, err := strconv.ParseUint(s, 10, getBitSize(T(0)))
 	return T(v), err
 }
 
-// ParseFloat returns a parser that parses a float string into the given type.
+// ParseFloat parses a float string into the given float type.
 func ParseFloat[T constraints.Float](s string) (T, error) {
 	v, err := strconv.ParseFloat(s, getBitSize(T(0)))
 	return T(v), err
