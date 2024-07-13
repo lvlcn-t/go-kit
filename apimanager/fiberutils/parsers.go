@@ -3,48 +3,29 @@ package fiberutils
 import (
 	"strconv"
 	"time"
+
+	"golang.org/x/exp/constraints"
 )
 
 // Parser is a function that parses a string into a value of the given type.
 type Parser[T any] func(string) (T, error)
 
-// IntParser is a type constraint for integer parsers.
-type IntParser interface {
-	~int | ~int8 | ~int16 | ~int32 | ~int64
-}
-
 // ParseInt returns a parser that parses an integer string into the given type.
-func ParseInt[T IntParser]() Parser[T] {
-	return func(s string) (T, error) {
-		v, err := strconv.ParseInt(s, 10, getBitSize(T(0)))
-		return T(v), err
-	}
-}
-
-// UintParser is a type constraint for unsigned integer parsers.
-type UintParser interface {
-	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+func ParseInt[T constraints.Signed](s string) (T, error) {
+	v, err := strconv.ParseInt(s, 10, getBitSize(T(0)))
+	return T(v), err
 }
 
 // ParseUint returns a parser that parses an unsigned integer string into the given type.
-func ParseUint[T UintParser]() Parser[T] {
-	return func(s string) (T, error) {
-		v, err := strconv.ParseUint(s, 10, getBitSize(T(0)))
-		return T(v), err
-	}
-}
-
-// FloatParser is a type constraint for float parsers.
-type FloatParser interface {
-	~float32 | ~float64
+func ParseUint[T constraints.Unsigned](s string) (T, error) {
+	v, err := strconv.ParseUint(s, 10, getBitSize(T(0)))
+	return T(v), err
 }
 
 // ParseFloat returns a parser that parses a float string into the given type.
-func ParseFloat[T FloatParser]() Parser[T] {
-	return func(s string) (T, error) {
-		v, err := strconv.ParseFloat(s, getBitSize(T(0)))
-		return T(v), err
-	}
+func ParseFloat[T constraints.Float](s string) (T, error) {
+	v, err := strconv.ParseFloat(s, getBitSize(T(0)))
+	return T(v), err
 }
 
 // ParseDate returns a parser that parses a date string into a time.Time using the given formats.

@@ -28,15 +28,15 @@ func TestParseInt(t *testing.T) {
 
 			switch tt.want.(type) {
 			case int:
-				result, err = ParseInt[int]()(tt.input)
+				result, err = ParseInt[int](tt.input)
 			case int8:
-				result, err = ParseInt[int8]()(tt.input)
+				result, err = ParseInt[int8](tt.input)
 			case int16:
-				result, err = ParseInt[int16]()(tt.input)
+				result, err = ParseInt[int16](tt.input)
 			case int32:
-				result, err = ParseInt[int32]()(tt.input)
+				result, err = ParseInt[int32](tt.input)
 			case int64:
-				result, err = ParseInt[int64]()(tt.input)
+				result, err = ParseInt[int64](tt.input)
 			}
 
 			if (err != nil) != tt.wantErr {
@@ -50,7 +50,6 @@ func TestParseInt(t *testing.T) {
 	}
 }
 
-// TestParseUint tests the ParseUint function with various unsigned integer types.
 func TestParseUint(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -63,6 +62,8 @@ func TestParseUint(t *testing.T) {
 		{"Valid uint8", "123", uint8(123), false},
 		{"Valid uint16", "12345", uint16(12345), false},
 		{"Valid uint32", "1234567890", uint32(1234567890), false},
+		{"Valid uint64", "1234567890123456789", uint64(1234567890123456789), false},
+		{"Valid uintptr", "123", uintptr(123), false},
 	}
 
 	for _, tt := range tests {
@@ -72,13 +73,17 @@ func TestParseUint(t *testing.T) {
 
 			switch tt.want.(type) {
 			case uint:
-				result, err = ParseUint[uint]()(tt.input)
+				result, err = ParseUint[uint](tt.input)
 			case uint8:
-				result, err = ParseUint[uint8]()(tt.input)
+				result, err = ParseUint[uint8](tt.input)
 			case uint16:
-				result, err = ParseUint[uint16]()(tt.input)
+				result, err = ParseUint[uint16](tt.input)
 			case uint32:
-				result, err = ParseUint[uint32]()(tt.input)
+				result, err = ParseUint[uint32](tt.input)
+			case uint64:
+				result, err = ParseUint[uint64](tt.input)
+			case uintptr:
+				result, err = ParseUint[uintptr](tt.input)
 			}
 
 			if (err != nil) != tt.wantErr {
@@ -113,9 +118,9 @@ func TestParseFloat(t *testing.T) {
 
 			switch tt.want.(type) {
 			case float32:
-				result, err = ParseFloat[float32]()(tt.input)
+				result, err = ParseFloat[float32](tt.input)
 			case float64:
-				result, err = ParseFloat[float64]()(tt.input)
+				result, err = ParseFloat[float64](tt.input)
 			}
 
 			if (err != nil) != tt.wantErr {
