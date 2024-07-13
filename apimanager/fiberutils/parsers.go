@@ -1,6 +1,7 @@
 package fiberutils
 
 import (
+	"runtime"
 	"strconv"
 	"time"
 
@@ -97,15 +98,18 @@ const (
 // If the type is not supported, it returns 0.
 func getBitSize(zero any) int {
 	switch zero.(type) {
-	case int, int64, uint, uint64:
-		return bitSize64
 	case int8, uint8:
 		return bitSize8
 	case int16, uint16:
 		return bitSize16
 	case int32, uint32, float32:
 		return bitSize32
-	case float64:
+	case int64, uint64, float64:
+		return bitSize64
+	case int, uint, uintptr:
+		if runtime.GOARCH == "386" || runtime.GOARCH == "arm" {
+			return bitSize32
+		}
 		return bitSize64
 	default:
 		return 0
