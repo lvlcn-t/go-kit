@@ -1,6 +1,8 @@
 package fiberutils
 
 import (
+	"fmt"
+	"net"
 	"runtime"
 	"strconv"
 	"time"
@@ -27,6 +29,21 @@ func ParseUint[T constraints.Unsigned](s string) (T, error) {
 func ParseFloat[T constraints.Float](s string) (T, error) {
 	v, err := strconv.ParseFloat(s, getBitSize(T(0)))
 	return T(v), err
+}
+
+// ParseComplex parses a complex string into the given complex type.
+func ParseComplex[T constraints.Complex](s string) (T, error) {
+	v, err := strconv.ParseComplex(s, getBitSize(T(0)))
+	return T(v), err
+}
+
+// ParseIP parses an IP address string into a [net.IP].
+func ParseIP(s string) (net.IP, error) {
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return nil, net.InvalidAddrError(fmt.Sprintf("invalid address: %q", s))
+	}
+	return ip, nil
 }
 
 // ParseDate returns a parser that parses a date string into a time.Time using the given formats.
@@ -88,10 +105,11 @@ func ParseDateTime(format ...string) Parser[time.Time] {
 
 // bitSize constants for various types.
 const (
-	bitSize8  = 8
-	bitSize16 = 16
-	bitSize32 = 32
-	bitSize64 = 64
+	bitSize8 = 1 << (iota + 3)
+	bitSize16
+	bitSize32
+	bitSize64
+	bitSize128
 )
 
 // getBitSize returns the bit size for various types.
@@ -104,13 +122,15 @@ func getBitSize(zero any) int {
 		return bitSize16
 	case int32, uint32, float32:
 		return bitSize32
-	case int64, uint64, float64:
+	case int64, uint64, float64, complex64:
 		return bitSize64
 	case int, uint, uintptr:
 		if runtime.GOARCH == "386" || runtime.GOARCH == "arm" {
 			return bitSize32
 		}
 		return bitSize64
+	case complex128:
+		return bitSize128
 	default:
 		return 0
 	}
