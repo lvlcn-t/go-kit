@@ -24,7 +24,7 @@ func TestLoad(t *testing.T) {
 		name      string
 		path      string
 		fallbacks []Fallback
-		want      Settings
+		want      Loadable
 		wantErr   bool
 		errType   reflect.Type
 	}{
@@ -112,7 +112,7 @@ func TestLoad_Pointer(t *testing.T) {
 	tests := []struct {
 		name    string
 		path    string
-		want    Settings
+		want    Loadable
 		wantErr bool
 	}{
 		{
@@ -152,7 +152,7 @@ func TestLoad_Pointer(t *testing.T) {
 	}
 }
 
-func setup(t *testing.T, path string, cfg Settings, fallbacks ...Fallback) {
+func setup(t *testing.T, path string, cfg Loadable, fallbacks ...Fallback) {
 	t.Helper()
 	if path == "" {
 		var err error

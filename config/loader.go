@@ -18,12 +18,12 @@ import (
 var (
 	// fsys is the filesystem used to load the configuration
 	fsys afero.Fs = afero.NewOsFs()
-	// bin is the name of the binary
-	bin string = filepath.Base(os.Args[0])
+	// appName is the name of the application (default: binary name)
+	appName string = filepath.Base(os.Args[0])
 )
 
-// Settings is an interface that must be implemented by a configuration struct
-type Settings interface {
+// Loadable is an interface that must be implemented by a configuration struct to be loaded.
+type Loadable interface {
 	// IsEmpty returns true if the configuration is empty
 	IsEmpty() bool
 }
@@ -36,20 +36,29 @@ type Fallback func() (string, error)
 //
 // You can provide a slice of fallback functions that will be used to get the configuration path if an empty path is provided.
 // The first fallback function that returns a path is used.
-// If no fallback functions are provided, the default fallback is used (~/.config/<binary-name>/config.yaml).
+// If no fallback functions are provided, the default fallback is used (~/.config/<appName>/config.yaml).
 //
-// All environment variables with the scheme "<binary-name>_<field-name>(_<recursive-field-name>)" will be considered.
+// All environment variables with the scheme "<appName>_<field-name>(_<recursive-field-name>)" will be considered.
 //
 // The configuration is unmarshalled into the provided struct.
 // Its IsEmpty method is called to check if the loaded configuration is empty.
-// Most of the time, you want to implement it like this:
+//
+// Example:
+//
+//	type Config struct {
+//		Host string
+//		Port int
+//	}
 //
 //	func (c Config) IsEmpty() bool {
 //		return c == (Config{})
 //	}
 //
-// Note: If the configuration is a pointer to a struct, the experimental feature behind viper.ExperimentalBindStruct() will not be used.
-func Load[T Settings](path string, fallbacks ...Fallback) (cfg T, err error) {
+//	cfg, err := config.Load[Config]("config.yaml")
+//	if err != nil {
+//		// Handle error
+//	}
+func Load[T Loadable](path string, fallbacks ...Fallback) (cfg T, err error) {
 	cfg, err = ensureStruct(cfg)
 	if err != nil {
 		return cfg, fmt.Errorf("given type is not a struct: %w", err)
@@ -73,7 +82,7 @@ func Load[T Settings](path string, fallbacks ...Fallback) (cfg T, err error) {
 	}
 	v.SetConfigFile(path)
 
-	v.SetEnvPrefix(strings.ToUpper(strings.ReplaceAll(bin, "-", "_")))
+	v.SetEnvPrefix(strings.ToUpper(strings.ReplaceAll(appName, "-", "_")))
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.AutomaticEnv()
 
@@ -94,10 +103,10 @@ func Load[T Settings](path string, fallbacks ...Fallback) (cfg T, err error) {
 	return cfg, nil
 }
 
-// SetBinaryName replaces the default binary name with the provided one.
+// SetName replaces the default application name with the provided one.
 // This function is not safe for concurrent use.
-func SetBinaryName(name string) {
-	bin = name
+func SetName(name string) {
+	appName = name
 }
 
 // SetFs replaces the default filesystem with the provided one.
@@ -113,7 +122,7 @@ func defaultFallback() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get user home directory: %w", err)
 	}
-	return filepath.Join(home, bin, "config.yaml"), nil
+	return filepath.Join(home, appName, "config.yaml"), nil
 }
 
 // ensureStruct ensures that the provided value is a struct or a pointer to a struct.
