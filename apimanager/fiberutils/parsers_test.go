@@ -1,11 +1,11 @@
 package fiberutils
 
 import (
+	"net"
 	"testing"
 	"time"
 )
 
-// TestParseInt tests the ParseInt function with various integer types.
 func TestParseInt(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -97,18 +97,22 @@ func TestParseUint(t *testing.T) {
 	}
 }
 
-// TestParseFloat tests the ParseFloat function with various float types.
-func TestParseFloat(t *testing.T) {
+func TestParse_Float_Complex(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
 		want    any
 		wantErr bool
+		funName string
 	}{
-		{"Valid float32", "123.45", float32(123.45), false},
-		{"Invalid float32", "abc", float32(0), true},
-		{"Valid float64", "123.45", float64(123.45), false},
-		{"Invalid float64", "abc", float64(0), true},
+		{"Valid float32", "123.45", float32(123.45), false, "ParseFloat"},
+		{"Invalid float32", "abc", float32(0), true, "ParseFloat"},
+		{"Valid float64", "123.45", float64(123.45), false, "ParseFloat"},
+		{"Invalid float64", "abc", float64(0), true, "ParseFloat"},
+		{"Valid complex64", "123.45+67.89i", complex64(123.45 + 67.89i), false, "ParseComplex"},
+		{"Invalid complex64", "abc", complex64(0), true, "ParseComplex"},
+		{"Valid complex128", "123.45+67.89i", complex128(123.45 + 67.89i), false, "ParseComplex"},
+		{"Invalid complex128", "abc", complex128(0), true, "ParseComplex"},
 	}
 
 	for _, tt := range tests {
@@ -121,20 +125,51 @@ func TestParseFloat(t *testing.T) {
 				result, err = ParseFloat[float32](tt.input)
 			case float64:
 				result, err = ParseFloat[float64](tt.input)
+			case complex64:
+				result, err = ParseComplex[complex64](tt.input)
+			case complex128:
+				result, err = ParseComplex[complex128](tt.input)
 			}
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseFloat() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("%s() error = %v, wantErr %v", tt.funName, err, tt.wantErr)
 				return
 			}
 			if result != tt.want {
-				t.Errorf("ParseFloat() = %v, want %v", result, tt.want)
+				t.Errorf("%s() = %v, want %v", tt.funName, result, tt.want)
 			}
 		})
 	}
 }
 
-// TestParseDate tests the ParseDate function.
+func TestParseIP(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    net.IP
+		wantErr bool
+	}{
+		{"Valid ipv4 address", "8.8.8.8", net.ParseIP("8.8.8.8"), false},
+		{"Invalid complex64", "abc", nil, true},
+		{"Valid ipv6 address", "::1", net.ParseIP("::1"), false},
+		{"Invalid ipv6 address", "xyz", nil, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ParseIP(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseIP() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !result.Equal(tt.want) {
+				t.Errorf("ParseIP() = %v, want %v", result, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseDate(t *testing.T) { //nolint:dupl // Different types are tested.
 	tests := []struct {
 		name    string
@@ -164,7 +199,6 @@ func TestParseDate(t *testing.T) { //nolint:dupl // Different types are tested.
 	}
 }
 
-// TestParseTime tests the ParseTime function.
 func TestParseTime(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -194,7 +228,6 @@ func TestParseTime(t *testing.T) {
 	}
 }
 
-// TestParseDateTime tests the ParseDateTime function.
 func TestParseDateTime(t *testing.T) { //nolint:dupl // Different types are tested.
 	tests := []struct {
 		name    string
@@ -224,7 +257,7 @@ func TestParseDateTime(t *testing.T) { //nolint:dupl // Different types are test
 	}
 }
 
-// Helper function to parse time with a format.
+// parseTime is a helper function to parse time with a format.
 func parseTime(t *testing.T, value, format string) time.Time {
 	t.Helper()
 	v, err := time.Parse(format, value)
