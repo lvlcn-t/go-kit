@@ -1,6 +1,7 @@
 package config
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"reflect"
@@ -61,7 +62,14 @@ func Validate(cfg any) error {
 		field := v.Field(i)
 		typ := v.Type().Field(i)
 		tag, ok := typ.Tag.Lookup("validate")
-		if !ok || tag == "-" {
+		if !ok || tag == "-" || !field.CanInterface() {
+			continue
+		}
+
+		if field.Kind() == reflect.Struct {
+			if err := Validate(field.Interface()); err != nil {
+				errs = append(errs, fmt.Errorf("field %s: %w", typ.Name, err))
+			}
 			continue
 		}
 
@@ -76,32 +84,16 @@ func Validate(cfg any) error {
 
 // newAST parses a validation tag and returns the corresponding AST
 func newAST(tag string) *validationNode {
-	root := newValidationNode("root", nil)
+	root := newValidationNode("root", "")
 	conditions := lists.Distinct(strings.Split(tag, ","))
 
 	for _, c := range conditions {
-		switch {
-		case c == "required":
-			root.addChild(newValidationNode("required", nil))
-		case strings.HasPrefix(c, "min="):
-			root.addChild(newValidationNode("min", strings.TrimPrefix(c, "min=")))
-		case strings.HasPrefix(c, "max="):
-			root.addChild(newValidationNode("max", strings.TrimPrefix(c, "max=")))
-		case strings.HasPrefix(c, "len="):
-			root.addChild(newValidationNode("len", strings.TrimPrefix(c, "len=")))
-		case strings.HasPrefix(c, "eq="):
-			root.addChild(newValidationNode("eq", strings.TrimPrefix(c, "eq=")))
-		case strings.HasPrefix(c, "ne="):
-			root.addChild(newValidationNode("ne", strings.TrimPrefix(c, "ne=")))
-		case strings.HasPrefix(c, "gt="):
-			root.addChild(newValidationNode("gt", strings.TrimPrefix(c, "gt=")))
-		case strings.HasPrefix(c, "lt="):
-			root.addChild(newValidationNode("lt", strings.TrimPrefix(c, "lt=")))
-		case strings.HasPrefix(c, "gte="):
-			root.addChild(newValidationNode("gte", strings.TrimPrefix(c, "gte=")))
-		case strings.HasPrefix(c, "lte="):
-			root.addChild(newValidationNode("lte", strings.TrimPrefix(c, "lte=")))
+		parts := strings.SplitN(c, "=", 2)
+		if len(parts) == 1 {
+			root.addChild(newValidationNode(parts[0], ""))
+			continue
 		}
+		root.addChild(newValidationNode(parts[0], parts[1]))
 	}
 
 	return root
@@ -110,12 +102,12 @@ func newAST(tag string) *validationNode {
 // validationNode represents a single validation rule node
 type validationNode struct {
 	Type     string
-	Value    any
+	Value    string
 	Children []*validationNode
 }
 
 // newValidationNode creates a new validation node
-func newValidationNode(t string, val any) *validationNode {
+func newValidationNode(t, val string) *validationNode {
 	return &validationNode{Type: t, Value: val, Children: []*validationNode{}}
 }
 
@@ -125,30 +117,9 @@ func (n *validationNode) addChild(child *validationNode) {
 }
 
 // validate traverses the AST and applies validation rules
-func (n *validationNode) validate(val any) error { //nolint:gocyclo // TODO: refactor to validators map (map[string]Validator)
-	switch n.Type {
-	case "required":
-		if val == nil || reflect.DeepEqual(val, reflect.Zero(reflect.TypeOf(val)).Interface()) {
-			return errors.New("field is required")
-		}
-	case "min":
-		return validateMin(val, n.Value.(string))
-	case "max":
-		return validateMax(val, n.Value.(string))
-	case "len":
-		return validateLen(val, n.Value.(string))
-	case "eq":
-		return validateEq(val, n.Value.(string))
-	case "ne":
-		return validateNe(val, n.Value.(string))
-	case "gt":
-		return validateGt(val, n.Value.(string))
-	case "lt":
-		return validateLt(val, n.Value.(string))
-	case "gte":
-		return validateGte(val, n.Value.(string))
-	case "lte":
-		return validateLte(val, n.Value.(string))
+func (n *validationNode) validate(val any) error {
+	if validator, ok := validators[n.Type]; ok {
+		return validator.Validate(val, n.Value)
 	}
 
 	var err error
@@ -163,27 +134,106 @@ func (n *validationNode) validate(val any) error { //nolint:gocyclo // TODO: ref
 	return err
 }
 
-type parserError struct {
-	field string
-	value string
+var validators = map[string]rule{
+	"required": newRequiredValidator(),
+	"min":      newComparisonValidator("min"),
+	"max":      newComparisonValidator("max"),
+	"len":      newLenValidator(),
+	"eq":       newEqValidator(),
+	"ne":       newNeValidator(),
+	"gt":       newComparisonValidator("gt"),
+	"lt":       newComparisonValidator("lt"),
+	"gte":      newComparisonValidator("gte"),
+	"lte":      newComparisonValidator("lte"),
 }
 
-func (e *parserError) Error() string {
-	return fmt.Sprintf("invalid value %q for %s", e.value, e.field)
+type rule interface {
+	Validate(input any, condition string) error
 }
 
-func newParserError(field, value string) error {
-	return &parserError{field: field, value: value}
+type requiredValidator struct{}
+
+func newRequiredValidator() rule {
+	return &requiredValidator{}
 }
 
-// validateLen validates the length of the value
-func validateLen(val any, length string) error {
+func (v *requiredValidator) Validate(input any, _ string) error {
+	if input == nil || reflect.DeepEqual(input, reflect.Zero(reflect.TypeOf(input)).Interface()) {
+		return errors.New("field is required")
+	}
+	return nil
+}
+
+type comparisonValidator struct {
+	op string
+}
+
+func newComparisonValidator(op string) rule {
+	return &comparisonValidator{op: op}
+}
+
+func (v *comparisonValidator) Validate(input any, condition string) error {
+	if input == nil {
+		return nil
+	}
+	switch input.(type) {
+	case int, int8, int16, int32, int64:
+		val, err := strconv.ParseInt(condition, 10, 64)
+		if err != nil {
+			return newParserError(v.op, condition)
+		}
+		return compare(reflect.ValueOf(input).Int(), val, v.op)
+	case uint, uint8, uint16, uint32, uint64:
+		val, err := strconv.ParseUint(condition, 10, 64)
+		if err != nil {
+			return newParserError(v.op, condition)
+		}
+		return compare(reflect.ValueOf(input).Uint(), val, v.op)
+	case float32, float64:
+		val, err := strconv.ParseFloat(condition, 64)
+		if err != nil {
+			return newParserError(v.op, condition)
+		}
+		return compare(reflect.ValueOf(input).Float(), val, v.op)
+	}
+	return nil
+}
+
+func compare[T cmp.Ordered](input, condition T, op string) error {
+	switch op {
+	case "gt":
+		if input <= condition {
+			return fmt.Errorf("value must be greater than %v", condition)
+		}
+	case "lt":
+		if input >= condition {
+			return fmt.Errorf("value must be less than %v", condition)
+		}
+	case "gte", "min":
+		if input < condition {
+			return fmt.Errorf("value must be at least %v", condition)
+		}
+	case "lte", "max":
+		if input > condition {
+			return fmt.Errorf("value must be at most %v", condition)
+		}
+	}
+	return nil
+}
+
+type lenValidator struct{}
+
+func newLenValidator() rule {
+	return &lenValidator{}
+}
+
+func (v *lenValidator) Validate(input any, length string) error {
 	l, err := strconv.Atoi(length)
 	if err != nil {
 		return newParserError("len", length)
 	}
 
-	switch v := val.(type) {
+	switch v := input.(type) {
 	case string:
 		if len(v) != l {
 			return fmt.Errorf("length must be %d", l)
@@ -196,282 +246,93 @@ func validateLen(val any, length string) error {
 	return nil
 }
 
-// validateMin validates the minimum value
-func validateMin(val any, minimum string) error { //nolint:dupl // no need to refactor for now
-	switch val.(type) {
-	case int, int8, int16, int32, int64:
-		m, err := strconv.ParseInt(minimum, 10, 64)
-		if err != nil {
-			return newParserError("min", minimum)
-		}
+// eqValidator checks for equality.
+type eqValidator struct{}
 
-		if reflect.ValueOf(val).Int() < m {
-			return fmt.Errorf("value must be at least %d", m)
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		m, err := strconv.ParseUint(minimum, 10, 64)
-		if err != nil {
-			return newParserError("min", minimum)
-		}
+func newEqValidator() rule {
+	return &eqValidator{}
+}
 
-		if reflect.ValueOf(val).Uint() < m {
-			return fmt.Errorf("value must be at least %d", m)
-		}
-	case float32, float64:
-		m, err := strconv.ParseFloat(minimum, 64)
-		if err != nil {
-			return newParserError("min", minimum)
-		}
+func (v *eqValidator) Validate(input any, eq string) error {
+	return compareValues(input, eq, "eq")
+}
 
-		if reflect.ValueOf(val).Float() < m {
-			return fmt.Errorf("value must be at least %f", m)
-		}
+// neValidator checks for inequality.
+type neValidator struct{}
+
+func newNeValidator() rule {
+	return &neValidator{}
+}
+
+func (v *neValidator) Validate(input any, ne string) error {
+	return compareValues(input, ne, "ne")
+}
+
+// compareValues compares input with a condition based on the operation.
+func compareValues[T comparable](input T, condition, op string) error {
+	val, err := parseCondition[T](condition)
+	if err != nil {
+		return err
 	}
+
+	switch op {
+	case "eq":
+		if input != val {
+			return fmt.Errorf("value must be eq to %v", val)
+		}
+	case "ne":
+		if input == val {
+			return fmt.Errorf("value must be ne to %v", val)
+		}
+	default:
+		return fmt.Errorf("unknown operation: %s", op)
+	}
+
 	return nil
 }
 
-// validateMax validates the maximum value
-func validateMax(val any, maximum string) error { //nolint:dupl // no need to refactor for now
-	switch val.(type) {
-	case int, int8, int16, int32, int64:
-		m, err := strconv.ParseInt(maximum, 10, 64)
-		if err != nil {
-			return newParserError("max", maximum)
-		}
-
-		if reflect.ValueOf(val).Int() > m {
-			return fmt.Errorf("value must be at most %d", m)
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		m, err := strconv.ParseUint(maximum, 10, 64)
-		if err != nil {
-			return newParserError("max", maximum)
-		}
-
-		if reflect.ValueOf(val).Uint() > m {
-			return fmt.Errorf("value must be at most %d", m)
-		}
-	case float32, float64:
-		m, err := strconv.ParseFloat(maximum, 64)
-		if err != nil {
-			return newParserError("max", maximum)
-		}
-
-		if reflect.ValueOf(val).Float() > m {
-			return fmt.Errorf("value must be at most %f", m)
-		}
+// parseCondition parses the condition string to the type of input.
+func parseCondition[T comparable](condition string) (T, error) {
+	var zero T
+	for reflect.TypeOf(zero).Kind() == reflect.Pointer {
+		zero = reflect.ValueOf(zero).Elem().Interface().(T)
 	}
-	return nil
-}
 
-// validateEq validates the value to be equal to the specified value
-func validateEq(val any, eq string) error { //nolint:dupl // no need to refactor for now
-	switch v := val.(type) {
+	switch any(zero).(type) {
 	case int, int8, int16, int32, int64:
-		e, err := strconv.ParseInt(eq, 10, 64)
+		val, err := strconv.ParseInt(condition, 10, 64)
 		if err != nil {
-			return newParserError("eq", eq)
+			return zero, fmt.Errorf("parse error: %v", err)
 		}
-
-		if reflect.ValueOf(val).Int() != e {
-			return fmt.Errorf("value must be equal to %d", e)
-		}
+		return any(val).(T), nil
 	case uint, uint8, uint16, uint32, uint64:
-		e, err := strconv.ParseUint(eq, 10, 64)
+		val, err := strconv.ParseUint(condition, 10, 64)
 		if err != nil {
-			return newParserError("eq", eq)
+			return zero, fmt.Errorf("parse error: %v", err)
 		}
-
-		if reflect.ValueOf(val).Uint() != e {
-			return fmt.Errorf("value must be equal to %d", e)
-		}
+		return any(val).(T), nil
 	case float32, float64:
-		e, err := strconv.ParseFloat(eq, 64)
+		val, err := strconv.ParseFloat(condition, 64)
 		if err != nil {
-			return newParserError("eq", eq)
+			return zero, fmt.Errorf("parse error: %v", err)
 		}
-
-		if reflect.ValueOf(val).Float() != e {
-			return fmt.Errorf("value must be equal to %f", e)
-		}
+		return any(val).(T), nil
 	case string:
-		if v != eq {
-			return fmt.Errorf("value must be equal to %s", eq)
-		}
+		return any(condition).(T), nil
+	default:
+		return zero, fmt.Errorf("unsupported type: %s", reflect.TypeOf(zero).Name())
 	}
-	return nil
 }
 
-// validateNe validates the value to be not equal to the specified value
-func validateNe(val any, ne string) error { //nolint:dupl // no need to refactor for now
-	switch v := val.(type) {
-	case int, int8, int16, int32, int64:
-		e, err := strconv.ParseInt(ne, 10, 64)
-		if err != nil {
-			return newParserError("ne", ne)
-		}
-
-		if reflect.ValueOf(val).Int() == e {
-			return fmt.Errorf("value must not be equal to %d", e)
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		e, err := strconv.ParseUint(ne, 10, 64)
-		if err != nil {
-			return newParserError("ne", ne)
-		}
-
-		if reflect.ValueOf(val).Uint() == e {
-			return fmt.Errorf("value must not be equal to %d", e)
-		}
-	case float32, float64:
-		e, err := strconv.ParseFloat(ne, 64)
-		if err != nil {
-			return newParserError("ne", ne)
-		}
-
-		if reflect.ValueOf(val).Float() == e {
-			return fmt.Errorf("value must not be equal to %f", e)
-		}
-	case string:
-		if v == ne {
-			return fmt.Errorf("value must not be equal to %s", ne)
-		}
-	}
-	return nil
+type parserError struct {
+	field string
+	value string
 }
 
-// validateGt validates the value to be greater than the specified value
-func validateGt(val any, gt string) error { //nolint:dupl // no need to refactor for now
-	switch val.(type) {
-	case int, int8, int16, int32, int64:
-		g, err := strconv.ParseInt(gt, 10, 64)
-		if err != nil {
-			return newParserError("gt", gt)
-		}
-
-		if reflect.ValueOf(val).Int() <= g {
-			return fmt.Errorf("value must be greater than %d", g)
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		g, err := strconv.ParseUint(gt, 10, 64)
-		if err != nil {
-			return newParserError("gt", gt)
-		}
-
-		if reflect.ValueOf(val).Uint() <= g {
-			return fmt.Errorf("value must be greater than %d", g)
-		}
-	case float32, float64:
-		g, err := strconv.ParseFloat(gt, 64)
-		if err != nil {
-			return newParserError("gt", gt)
-		}
-
-		if reflect.ValueOf(val).Float() <= g {
-			return fmt.Errorf("value must be greater than %f", g)
-		}
-	}
-	return nil
+func (e *parserError) Error() string {
+	return fmt.Sprintf("invalid value %q for %s", e.value, e.field)
 }
 
-// validateLt validates the value to be less than the specified value
-func validateLt(val any, lt string) error { //nolint:dupl // no need to refactor for now
-	switch val.(type) {
-	case int, int8, int16, int32, int64:
-		l, err := strconv.ParseInt(lt, 10, 64)
-		if err != nil {
-			return newParserError("lt", lt)
-		}
-
-		if reflect.ValueOf(val).Int() >= l {
-			return fmt.Errorf("value must be less than %d", l)
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		l, err := strconv.ParseUint(lt, 10, 64)
-		if err != nil {
-			return newParserError("lt", lt)
-		}
-
-		if reflect.ValueOf(val).Uint() >= l {
-			return fmt.Errorf("value must be less than %d", l)
-		}
-	case float32, float64:
-		l, err := strconv.ParseFloat(lt, 64)
-		if err != nil {
-			return newParserError("lt", lt)
-		}
-
-		if reflect.ValueOf(val).Float() >= l {
-			return fmt.Errorf("value must be less than %f", l)
-		}
-	}
-	return nil
-}
-
-// validateGte validates the value to be greater than or equal to the specified value
-func validateGte(val any, gte string) error { //nolint:dupl // no need to refactor for now
-	switch val.(type) {
-	case int, int8, int16, int32, int64:
-		g, err := strconv.ParseInt(gte, 10, 64)
-		if err != nil {
-			return newParserError("gte", gte)
-		}
-
-		if reflect.ValueOf(val).Int() < g {
-			return fmt.Errorf("value must be greater than or equal to %d", g)
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		g, err := strconv.ParseUint(gte, 10, 64)
-		if err != nil {
-			return newParserError("gte", gte)
-		}
-
-		if reflect.ValueOf(val).Uint() < g {
-			return fmt.Errorf("value must be greater than or equal to %d", g)
-		}
-	case float32, float64:
-		g, err := strconv.ParseFloat(gte, 64)
-		if err != nil {
-			return newParserError("gte", gte)
-		}
-
-		if reflect.ValueOf(val).Float() < g {
-			return fmt.Errorf("value must be greater than or equal to %f", g)
-		}
-	}
-	return nil
-}
-
-// validateLte validates the value to be less than or equal to the specified value
-func validateLte(val any, lte string) error { //nolint:dupl // no need to refactor for now
-	switch val.(type) {
-	case int, int8, int16, int32, int64:
-		l, err := strconv.ParseInt(lte, 10, 64)
-		if err != nil {
-			return newParserError("lte", lte)
-		}
-
-		if reflect.ValueOf(val).Int() > l {
-			return fmt.Errorf("value must be less than or equal to %d", l)
-		}
-	case uint, uint8, uint16, uint32, uint64:
-		l, err := strconv.ParseUint(lte, 10, 64)
-		if err != nil {
-			return newParserError("lte", lte)
-		}
-
-		if reflect.ValueOf(val).Uint() > l {
-			return fmt.Errorf("value must be less than or equal to %d", l)
-		}
-	case float32, float64:
-		l, err := strconv.ParseFloat(lte, 64)
-		if err != nil {
-			return newParserError("lte", lte)
-		}
-
-		if reflect.ValueOf(val).Float() > l {
-			return fmt.Errorf("value must be less than or equal to %f", l)
-		}
-	}
-	return nil
+func newParserError(field, value string) error {
+	return &parserError{field: field, value: value}
 }
