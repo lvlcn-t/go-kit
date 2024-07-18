@@ -3,6 +3,7 @@ module github.com/lvlcn-t/go-kit/config
 go 1.22
 
 require (
+	github.com/lvlcn-t/go-kit/lists v0.2.0
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/viper v1.20.0-alpha.2
 	sigs.k8s.io/yaml v1.4.0
