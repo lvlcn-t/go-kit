@@ -13,6 +13,7 @@ import (
 
 // Validator is an interface that can be implemented by a [Loadable] to be validated with custom rules.
 type Validator interface {
+	// Validate checks the configuration and returns an error if it is invalid.
 	Validate() error
 }
 
@@ -21,15 +22,15 @@ type Validator interface {
 //
 // The "validate" tag can contain the following rules:
 //   - required: the field must not be nil or the zero value (available for any type)
-//   - min=<value>: the field must be greater than or equal to the value (available for numeric, string, slice, and map types)
-//   - max=<value>: the field must be less than or equal to the value (available for numeric, string, slice, and map types)
+//   - min=<value>: the field must be greater than or equal to the value (available for [cmp.Ordered], slice, and map types)
+//   - max=<value>: the field must be less than or equal to the value (available for [cmp.Ordered], slice, and map types)
 //   - len=<value>: the field must have the specified length (available for string, slice, map, and chan types)
-//   - eq=<value>: the field must be equal to the value (available for comparable types)
-//   - ne=<value>: the field must not be equal to the value (available for comparable types)
-//   - gt=<value>: the field must be greater than the value (available for numeric and string types)
-//   - lt=<value>: the field must be less than the value (available for numeric and string types)
-//   - gte=<value>: the field must be greater than or equal to the value (available for numeric and string types)
-//   - lte=<value>: the field must be less than or equal to the value (available for numeric and string types)
+//   - eq=<value>: the field must be equal to the value (available for [cmp.Ordered] types)
+//   - ne=<value>: the field must not be equal to the value (available for [cmp.Ordered] types)
+//   - gt=<value>: the field must be greater than the value (available for [cmp.Ordered] types)
+//   - lt=<value>: the field must be less than the value (available for [cmp.Ordered] types)
+//   - gte=<value>: the field must be greater than or equal to the value (available for [cmp.Ordered] types)
+//   - lte=<value>: the field must be less than or equal to the value (available for [cmp.Ordered] types)
 //
 // Example:
 //
@@ -67,14 +68,14 @@ func Validate(cfg any) error {
 
 		if field.Kind() == reflect.Struct {
 			if err := Validate(field.Interface()); err != nil {
-				errs = append(errs, fmt.Errorf("field %s: %w", typ.Name, err))
+				errs = append(errs, newFieldError(typ.Name, typ.Type.String(), err))
 			}
 			continue
 		}
 
 		root := newAST(tag)
 		if err := root.apply(field.Interface()); err != nil {
-			errs = append(errs, fmt.Errorf("field %s: %w", typ.Name, err))
+			errs = append(errs, newFieldError(typ.Name, typ.Type.String(), err))
 		}
 	}
 
@@ -128,7 +129,7 @@ func (n *node) apply(value any) error {
 			if errors.Is(vErr, newParserError("", "")) {
 				panic(vErr)
 			}
-			err = errors.Join(err, vErr)
+			err = newRuleError(child.typ, err, vErr)
 		}
 	}
 	return err
@@ -183,7 +184,7 @@ func newRequiredRule() *requiredRule {
 // Validate checks if the value is not nil or the zero value.
 func (v *requiredRule) Validate(value any, _ string) error {
 	if value == nil || reflect.DeepEqual(value, reflect.Zero(reflect.TypeOf(value)).Interface()) {
-		return errors.New("field is required")
+		return &ErrFieldRequired{}
 	}
 	return nil
 }
@@ -198,10 +199,6 @@ func newLengthRule() *lengthRule {
 
 // Validate checks if the value has the specified length.
 func (v *lengthRule) Validate(value any, length string) error {
-	if value == nil {
-		return nil
-	}
-
 	l, err := strconv.Atoi(length)
 	if err != nil {
 		return newParserError(ruleLength, length)
@@ -239,10 +236,6 @@ func newComparisonRule(rule rule) *comparisonRule {
 
 // Validate checks if the value satisfies the comparison rule.
 func (v *comparisonRule) Validate(value any, condition string) error {
-	if value == nil {
-		return nil
-	}
-
 	val, null := getValue(value)
 	if null {
 		return nil
@@ -288,19 +281,19 @@ func compare[T cmp.Ordered](value, condition T, rule rule) error {
 	switch rule {
 	case ruleGreaterThan:
 		if cmp.Compare(value, condition) <= 0 {
-			return fmt.Errorf("value must be greater than %v", condition)
+			return newComparisonError(value, condition, ruleGreaterThan)
 		}
 	case ruleLessThan:
 		if cmp.Compare(value, condition) >= 0 {
-			return fmt.Errorf("value must be less than %v", condition)
+			return newComparisonError(value, condition, ruleLessThan)
 		}
 	case ruleGreaterThanEqual, ruleMinimum:
 		if cmp.Compare(value, condition) < 0 {
-			return fmt.Errorf("value must be at least %v", condition)
+			return newComparisonError(value, condition, ruleGreaterThanEqual)
 		}
 	case ruleLessThanEqual, ruleMaximum:
 		if cmp.Compare(value, condition) > 0 {
-			return fmt.Errorf("value must be at most %v", condition)
+			return newComparisonError(value, condition, ruleLessThanEqual)
 		}
 	}
 	return nil
@@ -334,31 +327,23 @@ func (v *unequalRule) Validate(value any, condition string) error {
 
 // validateEquality checks if the value is either equal or not equal to the condition depending on the operation.
 func validateEquality(value any, condition string, op rule) error {
-	if value == nil {
+	val, null := getValue(value)
+	if null {
 		return nil
 	}
 
-	val := reflect.ValueOf(value)
-	if val.Kind() == reflect.Ptr {
-		if val.IsNil() {
-			return nil
-		}
-		val = val.Elem()
-		value = val.Interface()
-	}
-
 	var err error
-	switch v := value.(type) {
-	case string:
-		err = compareEquality(v, condition, op)
-	case int, int8, int16, int32, int64:
-		err = compareEquality(reflect.ValueOf(v).Int(), condition, op)
-	case uint, uint8, uint16, uint32, uint64:
-		err = compareEquality(reflect.ValueOf(v).Uint(), condition, op)
-	case float32, float64:
-		err = compareEquality(reflect.ValueOf(v).Float(), condition, op)
+	switch val.Kind() {
+	case reflect.String:
+		err = compareEquality(val.String(), condition, op)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		err = compareEquality(val.Int(), condition, op)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		err = compareEquality(val.Uint(), condition, op)
+	case reflect.Float32, reflect.Float64:
+		err = compareEquality(val.Float(), condition, op)
 	default:
-		err = fmt.Errorf("unsupported type: %s", reflect.TypeOf(value).Name())
+		err = fmt.Errorf("unsupported type: %s", val.Type().Name())
 	}
 
 	return err
@@ -369,20 +354,23 @@ func validateEquality(value any, condition string, op rule) error {
 func compareEquality[T cmp.Ordered](value T, condition string, op rule) error {
 	condVal, err := parseValue[T](condition)
 	if err != nil {
+		if errors.Is(err, newParserError("", "")) {
+			err = newParserError(op, condition)
+		}
 		return err
 	}
 
 	switch op {
 	case ruleEqual:
 		if value != condVal {
-			return fmt.Errorf("value must be equal to %v", condVal)
+			return newComparisonError(value, condVal, ruleEqual)
 		}
 	case ruleNotEqual:
 		if value == condVal {
-			return fmt.Errorf("value must not be equal to %v", condVal)
+			return newComparisonError(value, condVal, ruleNotEqual)
 		}
 	default:
-		return fmt.Errorf("unknown operation: %s", op)
+		return newComparisonError(value, condVal, op)
 	}
 
 	return nil
@@ -392,7 +380,7 @@ func compareEquality[T cmp.Ordered](value T, condition string, op rule) error {
 func parseValue[T cmp.Ordered](condition string) (T, error) {
 	var zero T
 	typ := reflect.TypeOf(zero)
-	for typ.Kind() == reflect.Pointer {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 
@@ -400,25 +388,25 @@ func parseValue[T cmp.Ordered](condition string) (T, error) {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		val, err := strconv.ParseInt(condition, 10, 64)
 		if err != nil {
-			return zero, fmt.Errorf("parse error: %v", err)
+			return zero, newParserError("", condition)
 		}
 		return reflect.ValueOf(val).Convert(typ).Interface().(T), nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		val, err := strconv.ParseUint(condition, 10, 64)
 		if err != nil {
-			return zero, fmt.Errorf("parse error: %v", err)
+			return zero, newParserError("", condition)
 		}
 		return reflect.ValueOf(val).Convert(typ).Interface().(T), nil
 	case reflect.Float32, reflect.Float64:
 		val, err := strconv.ParseFloat(condition, 64)
 		if err != nil {
-			return zero, fmt.Errorf("parse error: %v", err)
+			return zero, newParserError("", condition)
 		}
 		return reflect.ValueOf(val).Convert(typ).Interface().(T), nil
 	case reflect.String:
 		return reflect.ValueOf(condition).Convert(typ).Interface().(T), nil
 	default:
-		return zero, fmt.Errorf("unsupported type: %s", typ.Name())
+		return zero, fmt.Errorf("unsupported type for validation tag: %s", typ.Name())
 	}
 }
 
@@ -426,6 +414,10 @@ func parseValue[T cmp.Ordered](condition string) (T, error) {
 // If the value is a pointer, it is dereferenced.
 // Returns the reflect value and a boolean indicating if the value is nil.
 func getValue(value any) (val reflect.Value, isNil bool) {
+	if value == nil {
+		return reflect.Value{}, true
+	}
+
 	val = reflect.ValueOf(value)
 	if val.Kind() == reflect.Pointer {
 		if val.IsNil() {

@@ -355,6 +355,9 @@ func TestValidate(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			if err != nil {
+				t.Logf("errors:\n%v", err)
+			}
 		})
 	}
 }
