@@ -45,3 +45,25 @@ type ErrConfigEmpty struct{}
 func (e ErrConfigEmpty) Error() string {
 	return "you must provide a configuration"
 }
+
+// parserError is an error type that indicates a parsing error with the validation rule.
+type parserError struct {
+	rule  rule
+	value string
+}
+
+// Error returns the error message.
+func (e *parserError) Error() string {
+	return fmt.Sprintf("invalid value %q for %s", e.value, e.rule)
+}
+
+// Is returns true if the target error is a parserError.
+func (e *parserError) Is(target error) bool {
+	_, ok := target.(*parserError)
+	return ok
+}
+
+// newParserError creates a new parser error.
+func newParserError(param rule, value string) error {
+	return &parserError{rule: param, value: value}
+}
