@@ -92,6 +92,68 @@ func main() {
 }
 ```
 
+If you want to validate the loaded configuration, you can either implement the `Validator` interface or use the `validate` tag in the struct:
+
+<!-- markdownlint-disable MD033 -->
+<details>
+
+<summary>Example with validation</summary>
+
+```go
+package main
+
+import (
+  "fmt"
+
+  "github.com/lvlcn-t/go-kit/config"
+)
+
+type Config struct {
+  Host string `mapstructure:"host" validate:"required"`
+  Port int    `mapstructure:"port" validate:"required"`
+}
+
+func (c Config) IsEmpty() bool {
+  return c == (Config{})
+}
+
+func main() {
+  // Load the configuration file
+  cfg, err := config.Load[Config]("config.yaml")
+  if err != nil {
+    fmt.Println(err)
+    return
+  }
+
+  err = config.Validate(cfg)
+  if err != nil {
+    fmt.Println(err)
+    return
+  }
+
+  fmt.Println(cfg.Host) // Output: localhost
+  fmt.Println(cfg.Port) // Output: 8080
+}
+```
+
+</details>
+<!-- markdownlint-enable MD033 -->
+
+The following validate tags are supported:
+
+| Tag        | Description                                                    | Example               | Available Types                                                                                                                                                                            |
+| ---------- | -------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `required` | The field must be set                                          | `validate:"required"` | `any`                                                                                                                                                                                      |
+| `min`      | The field must be greater than or equal to the specified value | `validate:"min=10"`   | [`cmp.Ordered`](https://pkg.go.dev/cmp#Ordered), [slices](https://go.dev/tour/moretypes/7), [arrays](https://go.dev/tour/moretypes/6) and [maps](https://go.dev/tour/moretypes/19)         |
+| `max`      | The field must be less than or equal to the specified value    | `validate:"max=10"`   | [`cmp.Ordered`](https://pkg.go.dev/cmp#Ordered), [slices](https://go.dev/tour/moretypes/7), [arrays](https://go.dev/tour/moretypes/6) and [maps](https://go.dev/tour/moretypes/19)         |
+| `len`      | The field must have the specified length                       | `validate:"len=10"`   | `string`, [slices](https://go.dev/tour/moretypes/7), [arrays](https://go.dev/tour/moretypes/6), [maps](https://go.dev/tour/moretypes/19) and [channels](https://go.dev/tour/concurrency/2) |
+| `eq`       | The field must be equal to the specified value                 | `validate:"eq=10"`    | [`cmp.Ordered`](https://pkg.go.dev/cmp#Ordered)                                                                                                                                            |
+| `ne`       | The field must not be equal to the specified value             | `validate:"ne=10"`    | [`cmp.Ordered`](https://pkg.go.dev/cmp#Ordered)                                                                                                                                            |
+| `gt`       | The field must be greater than the specified value             | `validate:"gt=10"`    | [`cmp.Ordered`](https://pkg.go.dev/cmp#Ordered)                                                                                                                                            |
+| `lt`       | The field must be less than the specified value                | `validate:"lt=10"`    | [`cmp.Ordered`](https://pkg.go.dev/cmp#Ordered)                                                                                                                                            |
+| `gte`      | The field must be greater than or equal to the specified value | `validate:"gte=10"`   | [`cmp.Ordered`](https://pkg.go.dev/cmp#Ordered)                                                                                                                                            |
+| `lte`      | The field must be less than or equal to the specified value    | `validate:"lte=10"`   | [`cmp.Ordered`](https://pkg.go.dev/cmp#Ordered)                                                                                                                                            |
+
 ### Lists
 
 You can use the `lists` package to work with lists in Go. The package provides a collection of functions to work with lists, such as filtering, mapping, and reducing.
