@@ -1,5 +1,7 @@
-// config package provides a way to load configuration from a file and environment variables.
-// To enable loading from environment variables, you need to set the build tag "viper_bind_struct" because of https://github.com/spf13/viper/pull/1429#issuecomment-1870976604
+// config package provides a way to load and validate configurations.
+//
+// You can load configurations from a file and environment variables.
+// You can validate configurations either by implementing the [Validator] interface or using the "validate" struct tag.
 package config
 
 import (

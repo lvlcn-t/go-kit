@@ -1,3 +1,4 @@
+// apimanager package provides a way to create and manage API servers.
 package apimanager
 
 import (
@@ -182,6 +183,7 @@ func New(c *Config, middlewares ...fiber.Handler) Server {
 
 // Run attaches all previously mounted routes and starts the server.
 // Runs indefinitely until an error occurs, the server shuts down, or the provided context is done.
+// The provided context will also be injected into the (fiber.Ctx).UserContext() of the request.
 func (s *server) Run(ctx context.Context) error {
 	err := s.attachRoutes(ctx)
 	if err != nil {

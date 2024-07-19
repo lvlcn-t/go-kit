@@ -1,3 +1,4 @@
+// metrics package provides a way to initialize OpenTelemetry metrics and Prometheus collectors.
 package metrics
 
 import (
