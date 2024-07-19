@@ -204,8 +204,8 @@ func (v *lengthRule) Validate(value any, length string) error {
 		return newParserError(ruleLength, length)
 	}
 
-	val, null := getValue(value)
-	if null {
+	val := getValue(value)
+	if !val.IsValid() {
 		return nil
 	}
 
@@ -236,8 +236,8 @@ func newComparisonRule(rule rule) *comparisonRule {
 
 // Validate checks if the value satisfies the comparison rule.
 func (v *comparisonRule) Validate(value any, condition string) error {
-	val, null := getValue(value)
-	if null {
+	val := getValue(value)
+	if !val.IsValid() {
 		return nil
 	}
 
@@ -327,8 +327,8 @@ func (v *unequalRule) Validate(value any, condition string) error {
 
 // validateEquality checks if the value is either equal or not equal to the condition depending on the operation.
 func validateEquality(value any, condition string, op rule) error {
-	val, null := getValue(value)
-	if null {
+	val := getValue(value)
+	if !val.IsValid() {
 		return nil
 	}
 
@@ -410,21 +410,13 @@ func parseValue[T cmp.Ordered](condition string) (T, error) {
 	}
 }
 
-// getValue returns the reflect value of the provided value.
+// getValue returns the [reflect.Value] of the provided value.
 // If the value is a pointer, it is dereferenced.
-// Returns the reflect value and a boolean indicating if the value is nil.
-func getValue(value any) (val reflect.Value, isNil bool) {
-	if value == nil {
-		return reflect.Value{}, true
+// Returns [reflect.ValueOf](nil) if the value is invalid.
+func getValue(value any) reflect.Value {
+	val := reflect.ValueOf(value)
+	if !val.IsValid() {
+		return val
 	}
-
-	val = reflect.ValueOf(value)
-	if val.Kind() == reflect.Pointer {
-		if val.IsNil() {
-			return reflect.Value{}, true
-		}
-		val = val.Elem()
-	}
-
-	return val, false
+	return reflect.Indirect(val)
 }
