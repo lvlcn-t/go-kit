@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -10,9 +11,49 @@ import (
 	_ "unsafe"
 
 	"github.com/google/go-cmp/cmp"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func Test_getTLS_Config(t *testing.T) {
+func TestExporter_RegisterExporter(t *testing.T) {
+	tests := []struct {
+		name     string
+		exporter Exporter
+		factory  exporterFactory
+		wantErr  bool
+	}{
+		{
+			name:     "mqtt exporter",
+			exporter: Exporter("mqtt"),
+			factory: func(ctx context.Context, config *Config) (trace.SpanExporter, error) {
+				return nil, nil
+			},
+			wantErr: false,
+		},
+		{
+			name:     "http exporter",
+			exporter: Exporter("http"),
+			factory: func(ctx context.Context, config *Config) (trace.SpanExporter, error) {
+				return nil, nil
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.exporter.RegisterExporter(tt.factory); (err != nil) != tt.wantErr {
+				t.Errorf("Exporter.RegisterExporter() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr {
+				if _, ok := registry[tt.exporter]; !ok {
+					t.Errorf("Exporter.RegisterExporter() exporter not registered")
+				}
+			}
+		})
+	}
+}
+
+func TestGetTLSConfig(t *testing.T) {
 	tests := []struct {
 		name     string
 		certPath string
