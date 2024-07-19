@@ -1,4 +1,4 @@
-// apimanager package provides a way to create and manage API servers.
+// Package apimanager provides a way to create and manage API servers.
 package apimanager
 
 import (

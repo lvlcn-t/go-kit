@@ -1,4 +1,4 @@
-// config package provides a way to load and validate configurations.
+// Package config provides a way to load and validate configurations.
 //
 // You can load configurations from a file and environment variables.
 // You can validate configurations either by implementing the [Validator] interface or using the "validate" struct tag.

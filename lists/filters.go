@@ -1,4 +1,4 @@
-// lists package provides a set of functions to manipulate slices.
+// Package lists provides a set of functions to manipulate slices.
 package lists
 
 import (

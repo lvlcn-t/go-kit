@@ -1,4 +1,4 @@
-// middleware package provides common middleware as [fiber.Handler].
+// Package middleware provides common middleware as [fiber.Handler].
 package middleware
 
 import (

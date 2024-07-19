@@ -1,4 +1,4 @@
-// fiberutils package provides utilities for working with the [fiber.Ctx] type.
+// Package fiberutils provides utilities for working with the [fiber.Ctx] type.
 package fiberutils
 
 import (
