@@ -66,12 +66,10 @@ func (e Exporter) String() string {
 
 // Validate validates the protocol
 func (e Exporter) Validate() error {
-	switch e {
-	case HTTP, GRPC, STDOUT, NOOP:
-		return nil
-	default:
+	if _, ok := registry[e]; !ok {
 		return fmt.Errorf("unsupported exporter type: %s", e.String())
 	}
+	return nil
 }
 
 // isExporting returns true if the protocol is exporting the traces
@@ -96,6 +94,16 @@ func (e Exporter) Create(ctx context.Context, config *Config) (sdktrace.SpanExpo
 		return factory(ctx, config)
 	}
 	return nil, fmt.Errorf("unsupported exporter type: %s", config.Exporter.String())
+}
+
+// RegisterExporter registers the exporter with the factory function.
+// Not safe for concurrent use.
+func (e Exporter) RegisterExporter(factory exporterFactory) error {
+	if _, ok := registry[e]; ok {
+		return fmt.Errorf("exporter %q is already registered", e.String())
+	}
+	registry[e] = factory
+	return nil
 }
 
 // newHTTPExporter creates a new HTTP exporter
