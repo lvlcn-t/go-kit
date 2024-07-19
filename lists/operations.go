@@ -6,12 +6,6 @@ import (
 )
 
 // Apply applies the function f to each element of the slice, returning a new slice with the results.
-//
-// Example:
-//
-//	Apply([]int{1, 2, 3}, func(i int) int {
-//		return i * i
-//	}) // Output: []int{1, 4, 9}
 func Apply[T any, R any](slice []T, f func(T) R) []R {
 	result := make([]R, 0, len(slice))
 	for _, item := range slice {
@@ -22,12 +16,6 @@ func Apply[T any, R any](slice []T, f func(T) R) []R {
 
 // Reduce applies the function f to each element of the slice, accumulating the results.
 // The accumulated value is initialized with the initial value.
-//
-// Example:
-//
-//	Reduce([]int{1, 2, 3}, 0, func(acc, item int) int {
-//		return acc + item
-//	}) // Output: 6
 func Reduce[T any, R any](slice []T, initial R, f func(R, T) R) R {
 	result := initial
 	for _, item := range slice {
@@ -37,10 +25,6 @@ func Reduce[T any, R any](slice []T, initial R, f func(R, T) R) R {
 }
 
 // LastIndexOf returns the index of the last occurrence of the value in the slice, or -1 if the value is not found.
-//
-// Example:
-//
-//	LastIndexOf([]int{1, 2, 3, 2}, 2) // Output: 3
 func LastIndexOf[T comparable](slice []T, value T) int {
 	for i := len(slice) - 1; i >= 0; i-- {
 		if slice[i] == value {
@@ -51,12 +35,6 @@ func LastIndexOf[T comparable](slice []T, value T) int {
 }
 
 // Count returns the number of elements in the slice that satisfy the predicate f.
-//
-// Example:
-//
-//	Count([]int{1, 2, 3, 4}, func(i int) bool {
-//		return i%2 == 0
-//	}) // Output: 2
 func Count[T any](slice []T, f Predicate[T]) int {
 	count := 0
 	for _, item := range slice {
@@ -68,10 +46,6 @@ func Count[T any](slice []T, f Predicate[T]) int {
 }
 
 // Distinct returns a new slice containing only the unique elements of the original slice.
-//
-// Example:
-//
-//	Distinct([]int{1, 2, 3, 2, 1}) // Output: []int{1, 2, 3}
 func Distinct[T comparable](slice []T) []T {
 	seen := make(map[T]struct{})
 	result := make([]T, 0, len(slice))
@@ -86,12 +60,6 @@ func Distinct[T comparable](slice []T) []T {
 
 // Partition returns two slices, the first containing the elements of the original slice that satisfy the predicate f,
 // and the second containing the elements that do not satisfy the predicate.
-//
-// Example:
-//
-//	Partition([]int{1, 2, 3, 4}, func(i int) bool {
-//		return i%2 == 0
-//	}) // Output: []int{2, 4}, []int{1, 3}
 func Partition[T any](slice []T, f Predicate[T]) (trueS, falseS []T) {
 	trueSlice := make([]T, 0, len(slice))
 	falseSlice := make([]T, 0, len(slice))
@@ -106,10 +74,6 @@ func Partition[T any](slice []T, f Predicate[T]) (trueS, falseS []T) {
 }
 
 // Permutations returns all possible permutations of the slice.
-//
-// Example:
-//
-//	Permutations([]int{1, 2, 3}) // Output: [][]int{{1, 2, 3}, {2, 1, 3}, {3, 1, 2}, {1, 3, 2}, {2, 3, 1}, {3, 2, 1}}
 func Permutations[T any](slice []T) [][]T {
 	var arrangeElements func([]T, int)
 	result := [][]T{}
@@ -135,10 +99,6 @@ func Permutations[T any](slice []T) [][]T {
 }
 
 // Combinations returns all possible combinations of n elements from the slice.
-//
-// Example:
-//
-//	Combinations([]int{1, 2, 3}, 2) // Output: [][]int{{1, 2}, {1, 3}, {2, 3}}
 func Combinations[T any](slice []T, n int) [][]T {
 	var result [][]T
 	var combine func([]T, int, int, []T)
@@ -161,10 +121,6 @@ func Combinations[T any](slice []T, n int) [][]T {
 }
 
 // Shuffle returns a new slice with the elements of the original slice shuffled.
-//
-// Example:
-//
-//	Shuffle([]int{1, 2, 3, 4}) // Output: []int{3, 1, 4, 2}
 func Shuffle[T any](slice []T) []T {
 	result := make([]T, len(slice))
 	perm := rand.New(rand.NewSource(time.Now().UnixNano())).Perm(len(slice)) // #nosec G404 // No need for cryptographically secure random number generator
@@ -182,10 +138,6 @@ type Pair[T any, R any] struct {
 
 // Zip combines the elements from two slices into a single slice of pairs.
 // The resulting slice has the length of the shortest input slice.
-//
-// Example:
-//
-//	Zip([]int{1, 2, 3}, []string{"a", "b", "c"}) // Output: []Pair{{1, "a"}, {2, "b"}, {3, "c"}}
 func Zip[T any, R any](slice1 []T, slice2 []R) []Pair[T, R] {
 	l := len(slice1)
 	if len(slice2) < l {
@@ -199,10 +151,6 @@ func Zip[T any, R any](slice1 []T, slice2 []R) []Pair[T, R] {
 }
 
 // Unzip converts a slice of pairs into a pair of slices.
-//
-// Example:
-//
-//	Unzip([]Pair{{1, "a"}, {2, "b"}, {3, "c"}}) // Output: []int{1, 2, 3}, []string{"a", "b", "c"}
 func Unzip[T any, R any](pairs []Pair[T, R]) (p1 []T, p2 []R) {
 	slice1 := make([]T, 0, len(pairs))
 	slice2 := make([]R, 0, len(pairs))
@@ -214,10 +162,6 @@ func Unzip[T any, R any](pairs []Pair[T, R]) (p1 []T, p2 []R) {
 }
 
 // Chunk splits the slice into chunks of the specified size.
-//
-// Example:
-//
-//	Chunk([]int{1, 2, 3, 4, 5}, 2) // Output: [][]int{{1, 2}, {3, 4}, {5}}
 func Chunk[T any](slice []T, size int) [][]T {
 	result := make([][]T, 0, (len(slice)+size-1)/size)
 	for i := 0; i < len(slice); i += size {
@@ -231,10 +175,6 @@ func Chunk[T any](slice []T, size int) [][]T {
 }
 
 // Flatten flattens the nested slices into a single slice.
-//
-// Example:
-//
-//	Flatten([][]int{{1, 2}, {3, 4}, {5}}) // Output: []int{1, 2, 3, 4, 5}
 func Flatten[T any](slices [][]T) []T {
 	result := make([]T, 0)
 	for _, slice := range slices {
@@ -244,10 +184,6 @@ func Flatten[T any](slices [][]T) []T {
 }
 
 // Intersect returns a new slice containing only the elements that are present in all input slices.
-//
-// Example:
-//
-//	Intersect([]int{1, 2, 3}, []int{2, 3, 4}, []int{3, 4, 5}) // Output: []int{3}
 func Intersect[T comparable](slices ...[]T) []T {
 	if len(slices) == 0 {
 		return []T{}
@@ -277,10 +213,6 @@ func Intersect[T comparable](slices ...[]T) []T {
 }
 
 // Difference returns a new slice containing the elements that are present in the first slice but not in the other input slices.
-//
-// Example:
-//
-//	Difference([]int{1, 2, 3}, []int{2, 3, 4}, []int{3, 4, 5}) // Output: []int{1}
 func Difference[T comparable](slices ...[]T) []T {
 	if len(slices) == 0 {
 		return []T{}
@@ -304,10 +236,6 @@ func Difference[T comparable](slices ...[]T) []T {
 }
 
 // Union returns a new slice containing all the unique elements that are present in any of the input slices.
-//
-// Example:
-//
-//	Union([]int{1, 2, 3}, []int{2, 3, 4}, []int{3, 4, 5}) // Output: []int{1, 2, 3, 4, 5}
 func Union[T comparable](slices ...[]T) []T {
 	seen := make(map[T]struct{})
 	result := make([]T, 0)
@@ -323,12 +251,6 @@ func Union[T comparable](slices ...[]T) []T {
 }
 
 // IsSorted checks if the slice is sorted to the order specified by the comparison function f.
-//
-// Example:
-//
-//	IsSorted([]int{1, 2, 3}, func(a, b int) bool {
-//		return a < b
-//	}) // Output: true
 func IsSorted[T comparable](slice []T, f func(T, T) bool) bool {
 	for i := 1; i < len(slice); i++ {
 		if f(slice[i], slice[i-1]) {
@@ -339,12 +261,6 @@ func IsSorted[T comparable](slice []T, f func(T, T) bool) bool {
 }
 
 // AllMatch returns true if all elements of the slice satisfy the predicate f.
-//
-// Example:
-//
-//	AllMatch([]int{1, 2, 3, 4}, func(i int) bool {
-//		return i > 0
-//	}) // Output: true
 func AllMatch[T any](slice []T, f Predicate[T]) bool {
 	for _, item := range slice {
 		if !f(item) {
@@ -355,12 +271,6 @@ func AllMatch[T any](slice []T, f Predicate[T]) bool {
 }
 
 // AnyMatch returns true if any element of the slice satisfies the predicate f.
-//
-// Example:
-//
-//	AnyMatch([]int{1, 2, 3, 4}, func(i int) bool {
-//		return i%2 == 0
-//	}) // Output: true
 func AnyMatch[T any](slice []T, f Predicate[T]) bool {
 	for _, item := range slice {
 		if f(item) {
@@ -371,12 +281,6 @@ func AnyMatch[T any](slice []T, f Predicate[T]) bool {
 }
 
 // NoneMatch returns true if none of the elements of the slice satisfy the predicate f.
-//
-// Example:
-//
-//	NoneMatch([]int{1, 2, 3, 4}, func(i int) bool {
-//		return i < 0
-//	}) // Output: true
 func NoneMatch[T any](slice []T, f Predicate[T]) bool {
 	return !AnyMatch(slice, f)
 }

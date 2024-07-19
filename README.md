@@ -110,7 +110,7 @@ import (
 
 type Config struct {
   Host string `mapstructure:"host" validate:"required"`
-  Port int    `mapstructure:"port" validate:"required"`
+  Port int    `mapstructure:"port" validate:"required,min=1024,max=65535"`
 }
 
 func (c Config) IsEmpty() bool {
