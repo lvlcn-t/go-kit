@@ -1,13 +1,18 @@
 version: 2
 updates:
   - package-ecosystem: "gomod"
-    directory: "/"
+    directories:
+      - "/apimanager"
+      - "/config"
+      - "/executors"
+      - "/lists"
+      - "/metrics"
     schedule:
       interval: "daily"
     labels:
       - "dependencies"
     commit-message:
-      prefix: "feat"
+      prefix: "chore"
       include: "scope"
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -25,5 +30,5 @@ updates:
     labels:
       - "dependencies"
     commit-message:
-      prefix: "feat"
+      prefix: "chore"
       include: "scope"
