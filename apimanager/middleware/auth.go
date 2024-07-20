@@ -100,6 +100,9 @@ func Authorize(roles ...string) fiber.Handler {
 }
 
 // AuthenticateWithClaims creates a middleware to check if the request is authenticated and extracts claims.
+// The claims are stored in the context's locals with the key "claims" and are of type T.
+//
+// Panics if the provider or verifier is nil.
 func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
 	if provider == nil {
 		panic("provider is nil")
@@ -134,7 +137,12 @@ func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
 }
 
 // AuthorizeWithClaims creates a middleware to check if the request is authorized based on roles.
+// The roles are extracted from the local claims using the provided key. If no key is provided, the oauth2 standard "roles" key is used.
 func AuthorizeWithClaims[T any](key string, roles ...string) fiber.Handler {
+	if key == "" {
+		key = "roles"
+	}
+
 	return func(c fiber.Ctx) error {
 		if len(roles) == 0 {
 			return c.Next()
@@ -248,6 +256,11 @@ func getRolesFromClaims(claims any, key string) ([]string, error) {
 	if !field.IsValid() {
 		return nil, fmt.Errorf("field %q not found in claims", key)
 	}
+
+	// TODO: Support nested structs and maps? If so, how? Let the user provide the depth of recursion by defining his key as "metadata.user.roles" (. as separator)?
+	// if field.Kind() == reflect.Map || field.Kind() == reflect.Struct {
+	// 	return getRolesFromClaims(field.Interface(), key)
+	// }
 
 	if field.Kind() != reflect.Slice {
 		return nil, fmt.Errorf("field %q is not a slice, got %v", key, field.Kind())
