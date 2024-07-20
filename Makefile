@@ -23,6 +23,14 @@ mod-tidy: ### Runs go mod tidy on all modules
 		cd - > /dev/null; \
 	done
 
+.PHONY: update-mods
+update-mods: ### Updates all modules to the latest version
+	@for module in $(MODULES); do \
+		cd $$module; \
+		go get -u; \
+		cd - > /dev/null; \
+	done
+
 .PHONY: tag-all
 tag-all: ### Tags all modules with [VERSION]
 	@if [ -z "$(VERSION)" ]; then \
