@@ -16,8 +16,8 @@ import (
 	"golang.org/x/text/language"
 )
 
-// AuthProvider represents an OIDC provider.
-type AuthProvider struct {
+// authProvider represents an OIDC provider.
+type authProvider struct {
 	// verifier is used to verify ID tokens.
 	verifier verifier
 	// config is used to configure the OAuth2 client.
@@ -61,7 +61,7 @@ func (c *AuthConfig) Validate() error {
 
 // NewAuthProvider initializes a new OIDC provider.
 // Returns an error if the configuration is invalid or the provider cannot be initialized.
-func NewAuthProvider(ctx context.Context, c *AuthConfig) (*AuthProvider, error) {
+func NewAuthProvider(ctx context.Context, c *AuthConfig) (*authProvider, error) {
 	if c == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -77,7 +77,7 @@ func NewAuthProvider(ctx context.Context, c *AuthConfig) (*AuthProvider, error) 
 		return nil, fmt.Errorf("failed to initialize oidc provider: %w", err)
 	}
 
-	return &AuthProvider{
+	return &authProvider{
 		verifier: newTokenVerifier(ctx, provider, &c.Config),
 		config: oauth2.Config{
 			ClientID:     c.ClientID,
@@ -89,26 +89,24 @@ func NewAuthProvider(ctx context.Context, c *AuthConfig) (*AuthProvider, error) 
 	}, nil
 }
 
-// Authenticate creates a middleware to check if the request is authenticated.
-func Authenticate(provider *AuthProvider) fiber.Handler {
+// Authenticate creates a middleware that verifies if the request is authenticated.
+// The token claims are extracted and stored in the context's locals with the key "claims".
+//
+// Panics if the provider is nil.
+func Authenticate(provider *authProvider) fiber.Handler {
 	return AuthenticateWithClaims[map[string]any](provider)
 }
 
-// Authorize creates a middleware to check if the request is authorized based on roles.
-func Authorize(roles ...string) fiber.Handler {
-	return AuthorizeWithClaims[map[string]any]("roles", roles...)
-}
-
-// AuthenticateWithClaims creates a middleware to check if the request is authenticated and extracts claims.
-// The claims are stored in the context's locals with the key "claims" and are of type T.
+// AuthenticateWithClaims creates a middleware that verifies if the request is authenticated.
+// The token claims are stored in the context's locals with the key "claims" and are of the provided type T.
 //
-// Panics if the provider or verifier is nil.
-func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
+// Panics if the provider is nil or the provider's verifier is nil.
+func AuthenticateWithClaims[T any](provider *authProvider) fiber.Handler {
 	if provider == nil {
 		panic("provider is nil")
 	}
 	if provider.verifier == nil {
-		panic("verifier is nil")
+		panic("the provider's verifier is nil")
 	}
 
 	return func(c fiber.Ctx) error {
@@ -136,8 +134,18 @@ func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
 	}
 }
 
-// AuthorizeWithClaims creates a middleware to check if the request is authorized based on roles.
-// The roles are extracted from the local claims using the provided key. If no key is provided, the oauth2 standard "roles" key is used.
+// Authorize creates a middleware that checks if the request is authorized based on roles.
+// The roles are extracted from the claims stored in the context's locals as map[string]any using the provided key.
+// If the roles claim is nested, use a period as a separator.
+// If no key is provided, it defaults to "roles". To use a different type, use [AuthorizeWithClaims].
+func Authorize(key string, roles ...string) fiber.Handler {
+	return AuthorizeWithClaims[map[string]any](key, roles...)
+}
+
+// AuthorizeWithClaims creates a middleware that checks if the request is authorized based on roles.
+// The roles are extracted from the local claims of type T using the provided key.
+// If the roles claim is nested, use a period as a separator.
+// If no key is provided, it defaults to "roles".
 func AuthorizeWithClaims[T any](key string, roles ...string) fiber.Handler {
 	if key == "" {
 		key = "roles"
@@ -151,7 +159,7 @@ func AuthorizeWithClaims[T any](key string, roles ...string) fiber.Handler {
 		log := logger.FromContext(c.UserContext())
 		claims, ok := c.Locals("claims").(T)
 		if !ok {
-			log.DebugContext(c.Context(), "No claims found")
+			log.WarnContext(c.Context(), "No claims found or invalid type", "claims", claims)
 			return fiberutils.ForbiddenResponse(c, "no claims found")
 		}
 
@@ -192,9 +200,6 @@ func extractToken(c fiber.Ctx) (string, error) {
 	return header[len(prefix):], nil
 }
 
-// titler is used to title an english string.
-var titler = cases.Title(language.AmericanEnglish)
-
 // getRolesFromClaims extracts roles from the provided claims.
 //
 // For a struct, it attempts to find a field tagged with `json` that matches the provided key. If no tagged field is found,
@@ -203,64 +208,11 @@ var titler = cases.Title(language.AmericanEnglish)
 // For a map, the key is used directly to retrieve the value, which must be a slice of strings.
 //
 // Returns an error if the claims are not a struct or map, the field is not found, or the field is not a slice of strings.
-//
-// Example with a struct:
-//
-//	type UserClaims struct {
-//		Roles []string `json:"roles"`
-//	}
-//
-//	claims := UserClaims{Roles: []string{"admin", "user"}}
-//	roles, err := getRolesFromClaims(claims, "roles")
-//	if err != nil {
-//		panic(err)
-//	}
-//	fmt.Println(roles) // Output: [admin, user]
-//
-// Example with a map:
-//
-//	claimsMap := map[string]any{"roles": []string{"admin", "user"}}
-//	roles, err := getRolesFromClaims(claimsMap, "roles")
-//	if err != nil {
-//		panic(err)
-//	}
-//	fmt.Println(roles) // Output: [admin, user]
 func getRolesFromClaims(claims any, key string) ([]string, error) {
-	val := reflect.Indirect(reflect.ValueOf(claims))
-	var field reflect.Value
-	switch val.Kind() {
-	case reflect.Struct:
-		// TODO: Maybe find the fallback in another iteration to make sure not to miss any field's tag?
-		for i := 0; i < val.NumField(); i++ {
-			if val.Type().Field(i).Tag.Get("json") == key {
-				field = val.Field(i)
-				break
-			}
-
-			// We need to title the key to match the struct field name.
-			// Otherwise, we could extract an unexposed field which would always be invalid.
-			if val.Type().Field(i).Name == titler.String(key) {
-				field = val.Field(i)
-				break
-			}
-		}
-	case reflect.Map:
-		field = val.MapIndex(reflect.ValueOf(key))
-		if field.Kind() == reflect.Interface {
-			field = field.Elem()
-		}
-	default:
-		return nil, fmt.Errorf("claims must be a struct or map, got %v", val.Kind())
+	field, err := getRolesField(reflect.ValueOf(claims), key)
+	if err != nil {
+		return nil, err
 	}
-
-	if !field.IsValid() {
-		return nil, fmt.Errorf("field %q not found in claims", key)
-	}
-
-	// TODO: Support nested structs and maps? If so, how? Let the user provide the depth of recursion by defining his key as "metadata.user.roles" (. as separator)?
-	// if field.Kind() == reflect.Map || field.Kind() == reflect.Struct {
-	// 	return getRolesFromClaims(field.Interface(), key)
-	// }
 
 	if field.Kind() != reflect.Slice {
 		return nil, fmt.Errorf("field %q is not a slice, got %v", key, field.Kind())
@@ -276,6 +228,56 @@ func getRolesFromClaims(claims any, key string) ([]string, error) {
 	}
 
 	return roles, nil
+}
+
+// getRolesField retrieves the roles field from the claims using the provided key.
+// To indicate a nested field, use a period as a separator.
+func getRolesField(val reflect.Value, key string) (reflect.Value, error) {
+	parts := strings.Split(key, ".")
+	for _, part := range parts {
+		val = reflect.Indirect(val)
+		switch val.Kind() {
+		case reflect.Struct:
+			val = getStructField(val, part)
+		case reflect.Map:
+			val = val.MapIndex(reflect.ValueOf(part))
+			if val.Kind() == reflect.Interface {
+				val = val.Elem()
+			}
+		default:
+			return reflect.Value{}, fmt.Errorf("field %q is neither a struct nor a map", part)
+		}
+		if !val.IsValid() {
+			return reflect.Value{}, fmt.Errorf("field %q not found", part)
+		}
+	}
+	return val, nil
+}
+
+// titler is used to title an english string.
+var titler = cases.Title(language.AmericanEnglish)
+
+// getStructField retrieves a field from a struct using the provided name.
+func getStructField(val reflect.Value, name string) reflect.Value {
+	if val.Kind() != reflect.Struct {
+		return reflect.Value{}
+	}
+
+	for i := 0; i < val.NumField(); i++ {
+		if val.Type().Field(i).Tag.Get("json") == name {
+			return val.Field(i)
+		}
+	}
+
+	for i := 0; i < val.NumField(); i++ {
+		// The name is capitalized to match an exported field.
+		// Otherwise, an unexposed field could be extracted which would always be invalid.
+		if val.Type().Field(i).Name == titler.String(name) {
+			return val.Field(i)
+		}
+	}
+
+	return reflect.Value{}
 }
 
 //go:generate moq -out auth_verifier_moq.go . verifier

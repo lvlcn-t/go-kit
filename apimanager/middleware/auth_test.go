@@ -150,14 +150,14 @@ func TestAuthenticateWithClaims(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		provider   *AuthProvider
+		provider   *authProvider
 		header     http.Header
 		wantStatus int
 		wantPanic  bool
 	}{
 		{
 			name: "Valid token",
-			provider: &AuthProvider{
+			provider: &authProvider{
 				verifier: &verifierMock{
 					VerifyFunc: func(ctx context.Context, token string) (tokenUnmarshaler, error) {
 						return validUnmarshaler, nil
@@ -169,7 +169,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "Invalid token",
-			provider: &AuthProvider{
+			provider: &authProvider{
 				verifier: &verifierMock{
 					VerifyFunc: func(ctx context.Context, token string) (tokenUnmarshaler, error) {
 						return nil, fmt.Errorf("invalid token")
@@ -181,7 +181,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "No token",
-			provider: &AuthProvider{
+			provider: &authProvider{
 				verifier: &verifierMock{},
 			},
 			header:     http.Header{"Authorization": []string{""}},
@@ -189,7 +189,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "No authorization header",
-			provider: &AuthProvider{
+			provider: &authProvider{
 				verifier: &verifierMock{},
 			},
 			header:     http.Header{},
@@ -197,7 +197,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "Invalid authorization header",
-			provider: &AuthProvider{
+			provider: &authProvider{
 				verifier: &verifierMock{},
 			},
 			header:     http.Header{"Authorization": []string{"invalid"}},
@@ -211,7 +211,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "Nil verifier",
-			provider: &AuthProvider{
+			provider: &authProvider{
 				verifier: nil,
 			},
 			header:    http.Header{"Authorization": []string{"Bearer valid-token"}},
@@ -219,7 +219,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "Failed to unmarshal token",
-			provider: &AuthProvider{
+			provider: &authProvider{
 				verifier: &verifierMock{
 					VerifyFunc: func(ctx context.Context, token string) (tokenUnmarshaler, error) {
 						return &tokenUnmarshalerMock{
@@ -358,6 +358,15 @@ func TestAuthorizeWithClaims(t *testing.T) {
 			key:        "roles",
 			wantStatus: fiber.StatusInternalServerError,
 		},
+		{
+			name:  "No key provided",
+			roles: []string{"admin"},
+			claims: map[string]any{
+				"roles": []string{"admin"},
+			},
+			key:        "",
+			wantStatus: fiber.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
@@ -466,7 +475,7 @@ func TestGetRolesFromClaims(t *testing.T) {
 			wantErr:   true,
 		},
 		{
-			name:      "Claims is not a struct or map",
+			name:      "Claims is neither a struct nor a map",
 			claims:    "invalid-claims",
 			key:       "roles",
 			wantRoles: nil,
@@ -476,6 +485,54 @@ func TestGetRolesFromClaims(t *testing.T) {
 			name:      "Claims is nil",
 			claims:    nil,
 			key:       "roles",
+			wantRoles: nil,
+			wantErr:   true,
+		},
+		{
+			name:      "Nested roles in map",
+			claims:    map[string]any{"nested": map[string]any{"roles": []string{"admin", "user"}}},
+			key:       "nested.roles",
+			wantRoles: []string{"admin", "user"},
+			wantErr:   false,
+		},
+		{
+			name: "Nested roles in struct with tags",
+			claims: struct {
+				Nested struct {
+					Roles []string `json:"roles"`
+				}
+			}{
+				Nested: struct {
+					Roles []string "json:\"roles\""
+				}{
+					Roles: []string{"admin", "user"},
+				},
+			},
+			key:       "nested.roles",
+			wantRoles: []string{"admin", "user"},
+			wantErr:   false,
+		},
+		{
+			name:      "Nested roles in struct without tags",
+			claims:    struct{ Nested struct{ Roles []string } }{Nested: struct{ Roles []string }{Roles: []string{"admin", "user"}}},
+			key:       "nested.roles",
+			wantRoles: []string{"admin", "user"},
+			wantErr:   false,
+		},
+		{
+			name: "Field not found in struct",
+			claims: struct {
+				Nested struct {
+					Roles []string `json:"roles"`
+				}
+			}{
+				Nested: struct {
+					Roles []string "json:\"roles\""
+				}{
+					Roles: []string{"admin", "user"},
+				},
+			},
+			key:       "nested.invalid",
 			wantRoles: nil,
 			wantErr:   true,
 		},
