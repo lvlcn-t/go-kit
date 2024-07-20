@@ -12,6 +12,8 @@ import (
 	"github.com/lvlcn-t/go-kit/apimanager/fiberutils"
 	"github.com/lvlcn-t/loggerhead/logger"
 	"golang.org/x/oauth2"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // AuthProvider represents an OIDC provider.
@@ -76,7 +78,7 @@ func NewAuthProvider(ctx context.Context, c *AuthConfig) (*AuthProvider, error) 
 	}
 
 	return &AuthProvider{
-		verifier: provider.VerifierContext(ctx, &c.Config),
+		verifier: newTokenVerifier(ctx, provider, &c.Config),
 		config: oauth2.Config{
 			ClientID:     c.ClientID,
 			ClientSecret: c.ClientSecret,
@@ -102,6 +104,9 @@ func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
 	if provider == nil {
 		panic("provider is nil")
 	}
+	if provider.verifier == nil {
+		panic("verifier is nil")
+	}
 
 	return func(c fiber.Ctx) error {
 		log := logger.FromContext(c.UserContext())
@@ -111,8 +116,7 @@ func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
 			return fiberutils.UnauthorizedResponse(c, err.Error())
 		}
 
-		var idToken tokenUnmarshaler
-		idToken, err = provider.verifier.Verify(c.Context(), token)
+		idToken, err := provider.verifier.Verify(c.Context(), token)
 		if err != nil {
 			log.DebugContext(c.Context(), "Failed to verify token", "error", err)
 			return fiberutils.UnauthorizedResponse(c, "invalid token")
@@ -180,6 +184,9 @@ func extractToken(c fiber.Ctx) (string, error) {
 	return header[len(prefix):], nil
 }
 
+// titler is used to title an english string.
+var titler = cases.Title(language.AmericanEnglish)
+
 // getRolesFromClaims extracts roles from the provided claims.
 //
 // For a struct, it attempts to find a field tagged with `json` that matches the provided key. If no tagged field is found,
@@ -211,29 +218,31 @@ func extractToken(c fiber.Ctx) (string, error) {
 //	}
 //	fmt.Println(roles) // Output: [admin, user]
 func getRolesFromClaims(claims any, key string) ([]string, error) {
-	v := reflect.ValueOf(claims)
-	if v.Kind() == reflect.Pointer {
-		v = v.Elem()
-	}
-
+	val := reflect.Indirect(reflect.ValueOf(claims))
 	var field reflect.Value
-	switch v.Kind() {
+	switch val.Kind() {
 	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
-			if v.Type().Field(i).Tag.Get("json") == key {
-				field = v.Field(i)
+		// TODO: Maybe find the fallback in another iteration to make sure not to miss any field's tag?
+		for i := 0; i < val.NumField(); i++ {
+			if val.Type().Field(i).Tag.Get("json") == key {
+				field = val.Field(i)
 				break
 			}
 
-			if v.Type().Field(i).Name == key {
-				field = v.Field(i)
+			// We need to title the key to match the struct field name.
+			// Otherwise, we could extract an unexposed field which would always be invalid.
+			if val.Type().Field(i).Name == titler.String(key) {
+				field = val.Field(i)
 				break
 			}
 		}
 	case reflect.Map:
-		field = v.MapIndex(reflect.ValueOf(key))
+		field = val.MapIndex(reflect.ValueOf(key))
+		if field.Kind() == reflect.Interface {
+			field = field.Elem()
+		}
 	default:
-		return nil, fmt.Errorf("claims must be a struct or map, got %v", v.Kind())
+		return nil, fmt.Errorf("claims must be a struct or map, got %v", val.Kind())
 	}
 
 	if !field.IsValid() {
@@ -246,7 +255,11 @@ func getRolesFromClaims(claims any, key string) ([]string, error) {
 
 	roles := make([]string, field.Len())
 	for i := 0; i < field.Len(); i++ {
-		roles[i] = field.Index(i).Interface().(string)
+		f := field.Index(i)
+		if f.Kind() != reflect.String {
+			return nil, fmt.Errorf("field %q is not a slice of strings, got %v", key, f.Kind())
+		}
+		roles[i] = f.Interface().(string)
 	}
 
 	return roles, nil
@@ -273,7 +286,21 @@ type verifier interface {
 	//	}
 	//
 	//	token, err := verifier.Verify(ctx, rawIDToken)
-	Verify(ctx context.Context, token string) (*oidc.IDToken, error)
+	Verify(ctx context.Context, token string) (tokenUnmarshaler, error)
+}
+
+var _ verifier = (*tokenVerifier)(nil)
+
+type tokenVerifier struct{ *oidc.IDTokenVerifier }
+
+func newTokenVerifier(ctx context.Context, provider *oidc.Provider, config *oidc.Config) *tokenVerifier {
+	return &tokenVerifier{
+		IDTokenVerifier: provider.VerifierContext(ctx, config),
+	}
+}
+
+func (v *tokenVerifier) Verify(ctx context.Context, token string) (tokenUnmarshaler, error) {
+	return v.IDTokenVerifier.Verify(ctx, token)
 }
 
 //go:generate moq -out auth_unmarshaler_moq.go . tokenUnmarshaler

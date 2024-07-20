@@ -5,7 +5,6 @@ package middleware
 
 import (
 	"context"
-	"github.com/coreos/go-oidc/v3/oidc"
 	"sync"
 )
 
@@ -19,7 +18,7 @@ var _ verifier = &verifierMock{}
 //
 //		// make and configure a mocked verifier
 //		mockedverifier := &verifierMock{
-//			VerifyFunc: func(ctx context.Context, token string) (*oidc.IDToken, error) {
+//			VerifyFunc: func(ctx context.Context, token string) (tokenUnmarshaler, error) {
 //				panic("mock out the Verify method")
 //			},
 //		}
@@ -30,7 +29,7 @@ var _ verifier = &verifierMock{}
 //	}
 type verifierMock struct {
 	// VerifyFunc mocks the Verify method.
-	VerifyFunc func(ctx context.Context, token string) (*oidc.IDToken, error)
+	VerifyFunc func(ctx context.Context, token string) (tokenUnmarshaler, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -46,7 +45,7 @@ type verifierMock struct {
 }
 
 // Verify calls VerifyFunc.
-func (mock *verifierMock) Verify(ctx context.Context, token string) (*oidc.IDToken, error) {
+func (mock *verifierMock) Verify(ctx context.Context, token string) (tokenUnmarshaler, error) {
 	if mock.VerifyFunc == nil {
 		panic("verifierMock.VerifyFunc: method is nil but verifier.Verify was just called")
 	}
