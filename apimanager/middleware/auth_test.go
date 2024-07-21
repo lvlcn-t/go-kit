@@ -150,14 +150,14 @@ func TestAuthenticateWithClaims(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		provider   *authProvider
+		provider   *AuthProvider
 		header     http.Header
 		wantStatus int
 		wantPanic  bool
 	}{
 		{
 			name: "Valid token",
-			provider: &authProvider{
+			provider: &AuthProvider{
 				verifier: &verifierMock{
 					VerifyFunc: func(ctx context.Context, token string) (tokenUnmarshaler, error) {
 						return validUnmarshaler, nil
@@ -169,7 +169,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "Invalid token",
-			provider: &authProvider{
+			provider: &AuthProvider{
 				verifier: &verifierMock{
 					VerifyFunc: func(ctx context.Context, token string) (tokenUnmarshaler, error) {
 						return nil, fmt.Errorf("invalid token")
@@ -181,7 +181,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "No token",
-			provider: &authProvider{
+			provider: &AuthProvider{
 				verifier: &verifierMock{},
 			},
 			header:     http.Header{"Authorization": []string{""}},
@@ -189,7 +189,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "No authorization header",
-			provider: &authProvider{
+			provider: &AuthProvider{
 				verifier: &verifierMock{},
 			},
 			header:     http.Header{},
@@ -197,7 +197,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "Invalid authorization header",
-			provider: &authProvider{
+			provider: &AuthProvider{
 				verifier: &verifierMock{},
 			},
 			header:     http.Header{"Authorization": []string{"invalid"}},
@@ -211,7 +211,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "Nil verifier",
-			provider: &authProvider{
+			provider: &AuthProvider{
 				verifier: nil,
 			},
 			header:    http.Header{"Authorization": []string{"Bearer valid-token"}},
@@ -219,7 +219,7 @@ func TestAuthenticateWithClaims(t *testing.T) {
 		},
 		{
 			name: "Failed to unmarshal token",
-			provider: &authProvider{
+			provider: &AuthProvider{
 				verifier: &verifierMock{
 					VerifyFunc: func(ctx context.Context, token string) (tokenUnmarshaler, error) {
 						return &tokenUnmarshalerMock{

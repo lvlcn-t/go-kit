@@ -16,8 +16,8 @@ import (
 	"golang.org/x/text/language"
 )
 
-// authProvider represents an OIDC provider.
-type authProvider struct {
+// AuthProvider represents an OIDC provider.
+type AuthProvider struct {
 	// verifier is used to verify ID tokens.
 	verifier verifier
 	// config is used to configure the OAuth2 client.
@@ -61,7 +61,7 @@ func (c *AuthConfig) Validate() error {
 
 // NewAuthProvider initializes a new OIDC provider.
 // Returns an error if the configuration is invalid or the provider cannot be initialized.
-func NewAuthProvider(ctx context.Context, c *AuthConfig) (*authProvider, error) {
+func NewAuthProvider(ctx context.Context, c *AuthConfig) (*AuthProvider, error) {
 	if c == nil {
 		return nil, errors.New("config is nil")
 	}
@@ -77,7 +77,7 @@ func NewAuthProvider(ctx context.Context, c *AuthConfig) (*authProvider, error) 
 		return nil, fmt.Errorf("failed to initialize oidc provider: %w", err)
 	}
 
-	return &authProvider{
+	return &AuthProvider{
 		verifier: newTokenVerifier(ctx, provider, &c.Config),
 		config: oauth2.Config{
 			ClientID:     c.ClientID,
@@ -93,7 +93,7 @@ func NewAuthProvider(ctx context.Context, c *AuthConfig) (*authProvider, error) 
 // The token claims are extracted and stored in the context's locals with the key "claims".
 //
 // Panics if the provider is nil.
-func Authenticate(provider *authProvider) fiber.Handler {
+func Authenticate(provider *AuthProvider) fiber.Handler {
 	return AuthenticateWithClaims[map[string]any](provider)
 }
 
@@ -101,7 +101,7 @@ func Authenticate(provider *authProvider) fiber.Handler {
 // The token claims are stored in the context's locals with the key "claims" and are of the provided type T.
 //
 // Panics if the provider is nil or the provider's verifier is nil.
-func AuthenticateWithClaims[T any](provider *authProvider) fiber.Handler {
+func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
 	if provider == nil {
 		panic("provider is nil")
 	}
