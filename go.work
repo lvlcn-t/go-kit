@@ -3,8 +3,8 @@ go 1.22
 use (
 	./apimanager
 	./config
+	./example
 	./executors
 	./lists
 	./metrics
-	./example
 )
