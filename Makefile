@@ -15,21 +15,38 @@ help: ### Display this help
 lint: ### Runs all pre-commit hooks on all modules
 	@pre-commit run -a
 
-.PHONY: mod-tidy
-mod-tidy: ### Runs go mod tidy on all modules
+.PHONY: tidy
+tidy: ### Runs go mod tidy on all modules
 	@for module in $(MODULES); do \
 		cd $$module; \
 		go mod tidy; \
 		cd - > /dev/null; \
 	done
 
-.PHONY: update-mods
-update-mods: ### Updates all modules to the latest version
+.PHONY: update 
+update: ### Updates all modules to the latest version
 	@for module in $(MODULES); do \
 		cd $$module; \
 		go get -u; \
 		cd - > /dev/null; \
 	done
+
+.PHONY: tag
+tag: ### Tags the [MODULE] with [VERSION]
+	@if [ -z "$(VERSION)" || -z "$(MODULE)" ]; then \
+		echo "No version or module found"; \
+		exit 1; \
+	fi
+	@read -p "Are you sure you want to tag $(MODULE) with $(VERSION)? [y/N] " -n 1 -r; \
+	if [[ ! $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo ""; \
+		echo "Aborting..."; \
+		exit 1; \
+	fi
+	@tag=$$(basename $(MODULE))/$(VERSION); \
+	echo "Tagging $(MODULE) with $$tag"; \
+	git tag $$tag; \
+	git push origin $$tag;
 
 .PHONY: tag-all
 tag-all: ### Tags all modules with [VERSION]
