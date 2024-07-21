@@ -151,7 +151,7 @@ func requestToken(ctx context.Context, code string) (*Token, error) {
 	token := &Token{
 		AccessToken: tok.AccessToken,
 		TokenType:   tok.TokenType,
-		ExpiresIn:   int(tok.Expiry.Sub(time.Now()).Seconds()),
+		ExpiresIn:   int(time.Until(tok.Expiry).Seconds()),
 	}
 	return token, nil
 }

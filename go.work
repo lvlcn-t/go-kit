@@ -6,4 +6,5 @@ use (
 	./executors
 	./lists
 	./metrics
+	./example
 )
