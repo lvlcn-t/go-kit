@@ -73,9 +73,11 @@ func (e Effector) WithFallback(fallback Effector) Effector {
 	}
 }
 
-// Parallel runs the effectors concurrently and returns the first error that occurs.
+// Concurrent returns an effector that runs the effectors concurrently and
+// returns the first error that occurs.
+//
 // Safe to use concurrently.
-func Parallel(effectors ...Effector) Effector {
+func Concurrent(effectors ...Effector) Effector {
 	return func(ctx context.Context) error {
 		g, ctx := errgroup.WithContext(ctx)
 		for _, effector := range effectors {
@@ -85,7 +87,9 @@ func Parallel(effectors ...Effector) Effector {
 	}
 }
 
-// Sequential runs the effectors sequentially and returns the first error that occurs.
+// Sequential returns an effector that runs the effectors sequentially and
+// returns the first error that occurs.
+//
 // Safe to use concurrently.
 func Sequential(effectors ...Effector) Effector {
 	return func(ctx context.Context) error {

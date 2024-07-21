@@ -275,7 +275,7 @@ func TestParallel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			effector := Parallel(tt.effectors...)
+			effector := Concurrent(tt.effectors...)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
