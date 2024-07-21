@@ -5,10 +5,10 @@ go 1.22
 require (
 	github.com/coreos/go-oidc/v3 v3.11.0
 	github.com/gofiber/fiber/v3 v3.0.0-beta.3
-	github.com/lvlcn-t/go-kit/apimanager v0.2.1
-	github.com/lvlcn-t/go-kit/config v0.2.1
-	github.com/lvlcn-t/go-kit/executors v0.2.0
-	github.com/lvlcn-t/go-kit/metrics v0.1.0
+	github.com/lvlcn-t/go-kit/apimanager v0.3.0
+	github.com/lvlcn-t/go-kit/config v0.3.0
+	github.com/lvlcn-t/go-kit/executors v0.3.0
+	github.com/lvlcn-t/go-kit/metrics v0.3.0
 	github.com/lvlcn-t/loggerhead v0.3.1
 	github.com/prometheus/client_golang v1.19.1
 	go.opentelemetry.io/otel v1.28.0
@@ -36,6 +36,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/lvlcn-t/go-kit/lists v0.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
