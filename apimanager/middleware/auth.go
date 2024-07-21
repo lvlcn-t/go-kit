@@ -134,25 +134,41 @@ func AuthenticateWithClaims[T any](provider *authProvider) fiber.Handler {
 	}
 }
 
+type AuthorizationOptions struct {
+	// Key is the key used to extract the roles from the claims.
+	// If you are not using a custom role extraction function, use periods to indicate nested fields.
+	Key string
+	// Roles are the roles required to access the route.
+	Roles []string
+	// GetRolesFromToken is used to extract roles from the claims.
+	// Returns the roles and an error if the roles cannot be extracted.
+	GetRolesFromToken func(token any, key string) ([]string, error)
+}
+
 // Authorize creates a middleware that checks if the request is authorized based on roles.
 // The roles are extracted from the claims stored in the context's locals as map[string]any using the provided key.
 // If the roles claim is nested, use a period as a separator.
 // If no key is provided, it defaults to "roles". To use a different type, use [AuthorizeWithClaims].
-func Authorize(key string, roles ...string) fiber.Handler {
-	return AuthorizeWithClaims[map[string]any](key, roles...)
+// If no custom GetRolesFromToken function is provided, it defaults to [getRolesFromClaims].
+func Authorize(options AuthorizationOptions) fiber.Handler {
+	return AuthorizeWithClaims[map[string]any](options)
 }
 
 // AuthorizeWithClaims creates a middleware that checks if the request is authorized based on roles.
 // The roles are extracted from the local claims of type T using the provided key.
 // If the roles claim is nested, use a period as a separator.
 // If no key is provided, it defaults to "roles".
-func AuthorizeWithClaims[T any](key string, roles ...string) fiber.Handler {
-	if key == "" {
-		key = "roles"
+func AuthorizeWithClaims[T any](options AuthorizationOptions) fiber.Handler {
+	if options.Key == "" {
+		options.Key = "roles"
+	}
+
+	if options.GetRolesFromToken == nil {
+		options.GetRolesFromToken = getRolesFromClaims
 	}
 
 	return func(c fiber.Ctx) error {
-		if len(roles) == 0 {
+		if len(options.Roles) == 0 {
 			return c.Next()
 		}
 
@@ -163,20 +179,20 @@ func AuthorizeWithClaims[T any](key string, roles ...string) fiber.Handler {
 			return fiberutils.ForbiddenResponse(c, "no claims found")
 		}
 
-		claimRoles, err := getRolesFromClaims(claims, key)
+		roles, err := options.GetRolesFromToken(claims, options.Key)
 		if err != nil {
 			log.ErrorContext(c.Context(), "Failed to get roles from claims", "error", err)
 			return fiberutils.InternalServerErrorResponse(c, "failed to get roles from claims")
 		}
 
 		roleMap := make(map[string]bool)
-		for _, role := range claimRoles {
+		for _, role := range roles {
 			roleMap[role] = true
 		}
 
-		for _, role := range roles {
+		for _, role := range options.Roles {
 			if !roleMap[role] {
-				log.DebugContext(c.Context(), "Insufficient permissions", "roles", roles)
+				log.DebugContext(c.Context(), "Insufficient permissions", "roles", options.Roles)
 				return fiberutils.ForbiddenResponse(c, "insufficient permissions")
 			}
 		}

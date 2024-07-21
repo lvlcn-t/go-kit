@@ -377,9 +377,9 @@ func TestAuthorizeWithClaims(t *testing.T) {
 					c.Locals("claims", tt.claims)
 				}
 				if roles, ok := tt.roles.([]string); ok || tt.roles == nil {
-					return AuthorizeWithClaims[map[string]any](tt.key, roles...)(c)
+					return AuthorizeWithClaims[map[string]any](AuthorizationOptions{Key: tt.key, Roles: roles})(c)
 				}
-				return AuthorizeWithClaims[map[string]any](tt.key, "do not skip")(c)
+				return AuthorizeWithClaims[map[string]any](AuthorizationOptions{Key: tt.key, Roles: []string{"do not skip"}})(c)
 			})
 
 			app.Use(func(c fiber.Ctx) error {
