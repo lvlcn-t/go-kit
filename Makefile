@@ -60,7 +60,11 @@ tag-all: ### Tags all modules with [VERSION]
 		echo "Aborting..."; \
 		exit 1; \
 	fi
+	@echo ""
 	@for module in $(MODULES); do \
+		if [ $$(basename $$module) == "example" ]; then \
+			continue; \
+		fi; \
 		tag=$$(basename $$module)/$(VERSION); \
 		echo "Tagging $$module with $$tag"; \
 		git tag $$tag; \
