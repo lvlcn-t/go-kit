@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 
 MODULES := $(shell go list -m | cut -d'/' -f 4- | sed 's/^/.\//')
-VERSION := "v0.2.0"
+VERSION := "v0.3.0"
 
 .PHONY: help
 help: ### Display this help
