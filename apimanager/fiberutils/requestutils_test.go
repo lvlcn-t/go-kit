@@ -14,6 +14,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/go-cmp/cmp"
+	"github.com/lvlcn-t/loggerhead/logger"
 )
 
 const testVal = "value"
@@ -632,6 +633,48 @@ func TestClient_Builders(t *testing.T) {
 					t.Errorf("want %v, got %v", strconv.Itoa(int(tt.wantPort)), got.String())
 				}
 				return
+			}
+		})
+	}
+}
+
+func TestLogger(t *testing.T) {
+	tests := []struct {
+		name string
+		log  logger.Logger
+	}{
+		{
+			name: "success",
+			log:  logger.NewLogger(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			app.Post("/", func(c fiber.Ctx) error {
+				l := Logger(c)
+				if l == nil {
+					t.Errorf("want logger, got nil")
+					return c.SendStatus(http.StatusInternalServerError)
+				}
+				return c.SendStatus(http.StatusOK)
+			})
+
+			req := newTestRequest(t, url{Path: "/"}, nil, http.NoBody, nil)
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("failed to test app: %v", err)
+			}
+			defer func() {
+				err := resp.Body.Close()
+				if err != nil {
+					t.Fatalf("failed to close response body: %v", err)
+				}
+			}()
+
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("want status code %v, got %v", http.StatusOK, resp.StatusCode)
 			}
 		})
 	}

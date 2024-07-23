@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/lvlcn-t/loggerhead/logger"
 )
 
 // Params returns the parameter with the given name from the context and converts it to the given type.
@@ -146,4 +147,9 @@ func (p Port) String() string {
 // Get returns the port as a uint16.
 func (p Port) Get() uint16 {
 	return uint16(p)
+}
+
+// Logger returns a logger with the method and path of the context.
+func Logger(c fiber.Ctx) logger.Logger {
+	return logger.FromContext(c.UserContext()).With("method", c.Method(), "path", c.Path())
 }
