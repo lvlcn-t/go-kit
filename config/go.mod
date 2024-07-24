@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/lvlcn-t/go-kit/lists v0.3.0
 	github.com/spf13/afero v1.11.0
-	github.com/spf13/viper v1.20.0-alpha.5
+	github.com/spf13/viper v1.20.0-alpha.6
 	sigs.k8s.io/yaml v1.4.0
 )
 
