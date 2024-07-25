@@ -264,14 +264,14 @@ func getRolesField(val reflect.Value, key string) (reflect.Value, error) {
 			val = getStructField(val, part)
 		case reflect.Map:
 			val = val.MapIndex(reflect.ValueOf(part))
-			if val.Kind() == reflect.Interface {
-				val = val.Elem()
-			}
 		default:
 			return reflect.Value{}, fmt.Errorf("field %q is neither a struct nor a map", part)
 		}
 		if !val.IsValid() {
 			return reflect.Value{}, fmt.Errorf("field %q not found", part)
+		}
+		if val.Kind() == reflect.Interface {
+			val = val.Elem()
 		}
 	}
 	return val, nil
