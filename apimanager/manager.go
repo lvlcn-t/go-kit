@@ -100,24 +100,24 @@ type TLSConfig struct {
 }
 
 // IsEmpty checks if the configuration is empty.
-func (c Config) IsEmpty() bool { //nolint:gocritic // To ensure compatibility with viper, no pointer receiver is used.
-	return reflect.DeepEqual(c, Config{})
+func (c *Config) IsEmpty() bool {
+	return c == nil || reflect.DeepEqual(c, &Config{})
 }
 
 // Validate validates the configuration.
 func (c *Config) Validate() error {
 	var err error
 	if c.Address == "" {
-		err = errors.New("api.address is required")
+		err = errors.Join(err, errors.New("address is required"))
 	}
 
 	if c.TLS.Enabled {
 		if c.TLS.CertFile == "" {
-			err = errors.Join(err, errors.New("api.tls.certPath is required"))
+			err = errors.Join(err, errors.New("certPath is required"))
 		}
 
 		if c.TLS.CertKeyFile == "" {
-			err = errors.Join(err, errors.New("api.tls.keyPath is required"))
+			err = errors.Join(err, errors.New("keyPath is required"))
 		}
 	}
 
