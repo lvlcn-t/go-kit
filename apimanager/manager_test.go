@@ -27,7 +27,7 @@ func TestNewServer(t *testing.T) {
 				app := fiber.New()
 				return &server{
 					mu: sync.Mutex{},
-					config: &Config{
+					config: Config{
 						Address:  ":8080",
 						BasePath: "/",
 					},
@@ -52,7 +52,7 @@ func TestNewServer(t *testing.T) {
 				app := fiber.New()
 				return &server{
 					mu: sync.Mutex{},
-					config: &Config{
+					config: Config{
 						Address:  ":8080",
 						BasePath: "/",
 					},
@@ -78,7 +78,7 @@ func TestNewServer(t *testing.T) {
 				app := fiber.New()
 				return &server{
 					mu: sync.Mutex{},
-					config: &Config{
+					config: Config{
 						Address:  ":8081",
 						BasePath: "/api",
 					},
@@ -107,7 +107,7 @@ func TestNewServer(t *testing.T) {
 				app := fiber.New()
 				return &server{
 					mu: sync.Mutex{},
-					config: &Config{
+					config: Config{
 						Address:  ":8081",
 						BasePath: "/api",
 					},
@@ -130,7 +130,7 @@ func TestNewServer(t *testing.T) {
 				app := fiber.New()
 				return &server{
 					mu: sync.Mutex{},
-					config: &Config{
+					config: Config{
 						Address:  ":8080",
 						BasePath: "/",
 					},

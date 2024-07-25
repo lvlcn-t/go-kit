@@ -129,7 +129,7 @@ type server struct {
 	// mu is the mutex to synchronize access to the server.
 	mu sync.Mutex
 	// config is the configuration of the server.
-	config *Config
+	config Config
 	// app is the fiber app of the server.
 	app *fiber.App
 	// router is the fiber root router of the server.
@@ -171,7 +171,7 @@ func New(c *Config, middlewares ...fiber.Handler) Server {
 
 	return &server{
 		mu:          sync.Mutex{},
-		config:      c,
+		config:      *c,
 		app:         app,
 		router:      app.Group(c.BasePath),
 		routes:      []Route{},
