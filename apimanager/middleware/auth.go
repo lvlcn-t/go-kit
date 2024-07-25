@@ -90,7 +90,7 @@ func NewAuthProvider(ctx context.Context, c *AuthConfig) (*AuthProvider, error) 
 }
 
 // Authenticate creates a middleware that verifies if the request is authenticated.
-// The token claims are extracted and stored in the context's locals with the key "claims".
+// The token claims are extracted and stored in the [fiber.Ctx] locals with the key "claims".
 //
 // Panics if the provider is nil.
 func Authenticate(provider *AuthProvider) fiber.Handler {
@@ -98,7 +98,7 @@ func Authenticate(provider *AuthProvider) fiber.Handler {
 }
 
 // AuthenticateWithClaims creates a middleware that verifies if the request is authenticated.
-// The token claims are stored in the context's locals with the key "claims" and are of the provided type T.
+// The token claims are stored in the [fiber.Ctx] locals with the key "claims" and are of the provided type T.
 //
 // Panics if the provider is nil or the provider's verifier is nil.
 func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
@@ -134,6 +134,7 @@ func AuthenticateWithClaims[T any](provider *AuthProvider) fiber.Handler {
 	}
 }
 
+// AuthorizationOptions represents the options for the authorization middleware.
 type AuthorizationOptions struct {
 	// Key is the key used to extract the roles from the claims.
 	// If you are not using a custom role extraction function, use periods to indicate nested fields.
@@ -146,18 +147,24 @@ type AuthorizationOptions struct {
 }
 
 // Authorize creates a middleware that checks if the request is authorized based on roles.
-// The roles are extracted from the claims stored in the context's locals as map[string]any using the provided key.
-// If the roles claim is nested, use a period as a separator.
-// If no key is provided, it defaults to "roles". To use a different type, use [AuthorizeWithClaims].
-// If no custom GetRolesFromToken function is provided, it defaults to [getRolesFromClaims].
+// The token are extracted from the [fiber.Ctx].Locals("claims") of type map[string]any using the provided key.
+//
+// Note:
+//   - When using this function, the type is assumed to be map[string]any. To use a different type, use [AuthorizeWithClaims].
+//   - If the roles claim is nested, use a period as a separator.
+//   - If no key is provided, it defaults to "roles".
+//   - If the [AuthorizationOptions].GetRolesFromToken function is not provided, it tries to extract the roles from the claims directly.
 func Authorize(options AuthorizationOptions) fiber.Handler {
 	return AuthorizeWithClaims[map[string]any](options)
 }
 
 // AuthorizeWithClaims creates a middleware that checks if the request is authorized based on roles.
 // The roles are extracted from the local claims of type T using the provided key.
-// If the roles claim is nested, use a period as a separator.
-// If no key is provided, it defaults to "roles".
+//
+// Note:
+//   - If the roles claim is nested, use a period as a separator.
+//   - If no key is provided, it defaults to "roles".
+//   - If the [AuthorizationOptions].GetRolesFromToken function is not provided, it tries to extract the roles from the claims directly.
 func AuthorizeWithClaims[T any](options AuthorizationOptions) fiber.Handler {
 	if options.Key == "" {
 		options.Key = "roles"
