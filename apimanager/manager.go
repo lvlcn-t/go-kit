@@ -295,11 +295,7 @@ func (s *server) attachRoutes(ctx context.Context) (err error) {
 	}
 
 	if s.config.UseDefaultHealthz {
-		s.routes = append(s.routes, Route{
-			Path:    "/healthz",
-			Methods: []string{http.MethodGet},
-			Handler: OkHandler,
-		})
+		s.addHealthzRoute()
 	}
 
 	for _, route := range s.routes {
@@ -372,6 +368,24 @@ func (s *server) Mounted() (routes []Route, groups []RouteGroup, middlewares []f
 // OkHandler is a handler that returns an HTTP 200 OK response.
 func OkHandler(c fiber.Ctx) error {
 	return c.Status(http.StatusOK).SendString("OK")
+}
+
+// addHealthzRoute adds the default healthz route to the server.
+//
+// Not safe for concurrent use so the server's [sync.Mutex] should be locked
+// before calling this function.
+func (s *server) addHealthzRoute() {
+	for i := range s.routes {
+		if s.routes[i].Path == "/healthz" {
+			return
+		}
+	}
+
+	s.routes = append(s.routes, Route{
+		Path:    "/healthz",
+		Methods: []string{http.MethodGet},
+		Handler: OkHandler,
+	})
 }
 
 // newContextWithTimeout returns a new context with a timeout.
