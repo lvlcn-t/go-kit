@@ -83,8 +83,9 @@ func Validate(cfg any) error {
 }
 
 // newAST parses a validation tag and returns the corresponding AST node.
+// Panics if an unknown rule is encountered.
 func newAST(tag string) *node {
-	root := newNode("root", "")
+	root := &node{typ: "root", children: []*node{}}
 	conditions := lists.Distinct(strings.Split(tag, ","))
 
 	for _, cond := range conditions {
@@ -102,14 +103,18 @@ func newAST(tag string) *node {
 // node represents a single validation rule in the abstract syntax tree.
 // Each node can have multiple children, which represent additional rules.
 type node struct {
-	typ      rule
+	typ      Rule
 	value    string
 	children []*node
 }
 
 // newNode creates a new validation rule node.
 func newNode(typ, val string) *node {
-	return &node{typ: rule(typ), value: val, children: []*node{}}
+	if !Rule(typ).isValid() {
+		panic(fmt.Errorf("unknown validation rule: %q", typ))
+	}
+
+	return &node{typ: Rule(typ), value: val, children: []*node{}}
 }
 
 // addChild adds a child node to the current node.
@@ -135,43 +140,8 @@ func (n *node) apply(value any) error {
 	return err
 }
 
-// rule represents a validation rule.
-type rule string
-
-// String returns the string representation of the rule.
-func (a rule) String() string {
-	return string(a)
-}
-
-// Validation rules.
-const (
-	ruleRequired         rule = "required"
-	ruleMinimum          rule = "min"
-	ruleMaximum          rule = "max"
-	ruleLength           rule = "len"
-	ruleEqual            rule = "eq"
-	ruleNotEqual         rule = "ne"
-	ruleGreaterThan      rule = "gt"
-	ruleLessThan         rule = "lt"
-	ruleGreaterThanEqual rule = "gte"
-	ruleLessThanEqual    rule = "lte"
-)
-
 // validators contains all available validation rules.
-var validators = map[rule]interface {
-	Validate(value any, condition string) error
-}{
-	ruleRequired:         newRequiredRule(),
-	ruleMinimum:          newComparisonRule(ruleMinimum),
-	ruleMaximum:          newComparisonRule(ruleMaximum),
-	ruleLength:           newLengthRule(),
-	ruleEqual:            newEqualRule(),
-	ruleNotEqual:         newUneqalRule(),
-	ruleGreaterThan:      newComparisonRule(ruleGreaterThan),
-	ruleLessThan:         newComparisonRule(ruleLessThan),
-	ruleGreaterThanEqual: newComparisonRule(ruleGreaterThanEqual),
-	ruleLessThanEqual:    newComparisonRule(ruleLessThanEqual),
-}
+var validators = builtinRules
 
 // requiredRule is a validation rule that checks if a field is not nil or the zero value.
 type requiredRule struct{}
@@ -226,11 +196,11 @@ func (v *lengthRule) Validate(value any, length string) error {
 
 // comparisonRule is a validation rule that checks if a field satisfies a comparison rule.
 type comparisonRule struct {
-	rule rule
+	rule Rule
 }
 
 // newComparisonRule creates a new comparison rule.
-func newComparisonRule(rule rule) *comparisonRule {
+func newComparisonRule(rule Rule) *comparisonRule {
 	return &comparisonRule{rule: rule}
 }
 
@@ -277,7 +247,7 @@ func (v *comparisonRule) Validate(value any, condition string) error {
 }
 
 // compare checks if the value satisfies the comparison rule.
-func compare[T cmp.Ordered](value, condition T, rule rule) error {
+func compare[T cmp.Ordered](value, condition T, rule Rule) error {
 	switch rule {
 	case ruleGreaterThan:
 		if cmp.Compare(value, condition) <= 0 {
@@ -326,7 +296,7 @@ func (v *unequalRule) Validate(value any, condition string) error {
 }
 
 // validateEquality checks if the value is either equal or not equal to the condition depending on the operation.
-func validateEquality(value any, condition string, op rule) error {
+func validateEquality(value any, condition string, op Rule) error {
 	val := getValue(value)
 	if !val.IsValid() {
 		return nil
@@ -351,7 +321,7 @@ func validateEquality(value any, condition string, op rule) error {
 
 // compareEquality checks if the value is either equal or not equal to the condition.
 // The operation is determined by the provided rule.
-func compareEquality[T cmp.Ordered](value T, condition string, op rule) error {
+func compareEquality[T cmp.Ordered](value T, condition string, op Rule) error {
 	condVal, err := parseValue[T](condition)
 	if err != nil {
 		if errors.Is(err, newParserError("", "")) {

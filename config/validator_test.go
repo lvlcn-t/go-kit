@@ -195,7 +195,8 @@ func TestValidate(t *testing.T) {
 				Host: "localhost",
 				Port: 8080,
 			},
-			wantErr: false,
+			wantErr:   true,
+			wantPanic: true,
 		},
 		{
 			name: "config with an invalid tag value",

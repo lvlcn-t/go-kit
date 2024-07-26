@@ -98,7 +98,7 @@ func (e ErrConfigEmpty) Error() string {
 
 // parserError is an error type that indicates a parsing error with the validation rule.
 type parserError struct {
-	rule  rule
+	rule  Rule
 	value string
 }
 
@@ -117,13 +117,13 @@ func (e *parserError) Is(target error) bool {
 }
 
 // newParserError creates a new parser error.
-func newParserError(rule rule, value string) error {
+func newParserError(rule Rule, value string) error {
 	return &parserError{rule: rule, value: value}
 }
 
 // ruleError is an error type that indicates a validation error with the configuration.
 type ruleError struct {
-	typ  rule
+	typ  Rule
 	errs []error
 }
 
@@ -151,7 +151,7 @@ func (e *ruleError) Is(target error) bool {
 }
 
 // newRuleError creates a new rule error which wraps a list of errors.
-func newRuleError(typ rule, errs ...error) error {
+func newRuleError(typ Rule, errs ...error) error {
 	err := errors.Join(errs...)
 	if err == nil {
 		return nil
@@ -164,7 +164,7 @@ func newRuleError(typ rule, errs ...error) error {
 type comparisonError struct {
 	value any
 	cond  any
-	rule  rule
+	rule  Rule
 }
 
 // Error returns the error message.
@@ -176,7 +176,7 @@ func (e *comparisonError) Error() string {
 		condition = fmt.Sprintf("%q", e.cond)
 	}
 
-	op := map[rule]string{
+	op := map[Rule]string{
 		ruleGreaterThan:      "greater than",
 		ruleLessThan:         "less than",
 		ruleGreaterThanEqual: "greater than or equal to",
@@ -201,6 +201,6 @@ func (e *comparisonError) Is(target error) bool {
 }
 
 // newComparisonError creates a new comparison error.
-func newComparisonError(value, cond any, rule rule) *comparisonError {
+func newComparisonError(value, cond any, rule Rule) *comparisonError {
 	return &comparisonError{value: value, cond: cond, rule: rule}
 }
