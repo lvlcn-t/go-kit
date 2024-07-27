@@ -2,6 +2,7 @@ package lists_test
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/lvlcn-t/go-kit/lists"
 )
@@ -125,6 +126,9 @@ func ExampleFlatten() {
 func ExampleIntersect() {
 	// Intersect two slices
 	result := lists.Intersect([]int{1, 2, 3}, []int{2, 3, 4})
+
+	// Sort the result to ensure consistent output
+	slices.Sort(result)
 
 	fmt.Println(result)
 	// Output: [2 3]
