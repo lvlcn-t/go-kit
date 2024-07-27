@@ -57,6 +57,8 @@ func (r Rule) isBuiltin() bool {
 }
 
 // RuleChecker is an interface that defines a method to validate a value against a condition.
+//
+//go:generate moq -out rule_moq.go . RuleChecker
 type RuleChecker interface {
 	// Validate checks if the value satisfies the condition.
 	// The condition is a string representation of the rule's value. (i.e., "min=10" -> "10")

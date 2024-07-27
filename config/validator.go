@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strconv"
 	"strings"
@@ -141,7 +142,7 @@ func (n *node) apply(value any) error {
 }
 
 // validators contains all available validation rules.
-var validators = builtinRules
+var validators = maps.Clone(builtinRules)
 
 // requiredRule is a validation rule that checks if a field is not nil or the zero value.
 type requiredRule struct{}
