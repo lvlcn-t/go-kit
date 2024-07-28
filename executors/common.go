@@ -74,30 +74,46 @@ func (e Effector) WithFallback(fallback Effector) Effector {
 }
 
 // Concurrent returns an effector that runs the effectors concurrently and
-// returns the first error that occurs.
+// returns all errors that occurred as wrapped [errors.Join] error.
 //
 // Safe to use concurrently.
 func Concurrent(effectors ...Effector) Effector {
 	return func(ctx context.Context) error {
 		g, ctx := errgroup.WithContext(ctx)
+		errs := make(chan error, len(effectors))
 		for _, effector := range effectors {
-			g.Go(func() error { return effector(ctx) })
+			effector := effector
+			g.Go(func() error {
+				err := effector(ctx)
+				errs <- err
+				return err
+			})
 		}
-		return g.Wait()
+		go func() {
+			// The returned error is ignored here on purpose,
+			// as we are interested in all errors and not just the first one.
+			_ = g.Wait()
+			close(errs)
+		}()
+
+		var err error
+		for e := range errs {
+			err = errors.Join(err, e)
+		}
+		return err
 	}
 }
 
 // Sequential returns an effector that runs the effectors sequentially and
-// returns the first error that occurs.
+// returns all errors that occurred as wrapped [errors.Join] error.
 //
 // Safe to use concurrently.
 func Sequential(effectors ...Effector) Effector {
 	return func(ctx context.Context) error {
+		var errs []error
 		for _, effector := range effectors {
-			if err := effector(ctx); err != nil {
-				return err
-			}
+			errs = append(errs, effector(ctx))
 		}
-		return nil
+		return errors.Join(errs...)
 	}
 }
