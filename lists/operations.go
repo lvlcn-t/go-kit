@@ -130,6 +130,20 @@ func Shuffle[T any](slice []T) []T {
 	return result
 }
 
+// Sample returns a new slice with n elements randomly sampled from the original slice.
+func Sample[T any](slice []T, n int) []T {
+	if n >= len(slice) {
+		return slice
+	}
+
+	result := make([]T, n)
+	perm := rand.New(rand.NewSource(time.Now().UnixNano())).Perm(len(slice)) // #nosec G404 // No need for cryptographically secure random number generator
+	for i := 0; i < n; i++ {
+		result[i] = slice[perm[i]]
+	}
+	return result
+}
+
 // Pair represents a pair of elements.
 type Pair[T any, R any] struct {
 	First  T

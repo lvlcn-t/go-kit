@@ -88,6 +88,13 @@ func ExampleShuffle() {
 	fmt.Println(result)
 }
 
+func ExampleSample() {
+	// Sample a random element
+	result := lists.Sample([]int{1, 2, 3, 4}, 2)
+
+	fmt.Println(result)
+}
+
 func ExampleZip() {
 	// Zip two slices
 	result := lists.Zip([]int{1, 2, 3}, []string{"a", "b", "c"})

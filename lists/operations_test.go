@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestOperations_Apply(t *testing.T) {
+func TestApply(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -39,7 +39,7 @@ func TestOperations_Apply(t *testing.T) {
 	}
 }
 
-func TestOperations_Reduce(t *testing.T) {
+func TestReduce(t *testing.T) {
 	tests := []struct {
 		name    string
 		slice   []int
@@ -76,7 +76,7 @@ func TestOperations_Reduce(t *testing.T) {
 	}
 }
 
-func TestOperations_LastIndexOf(t *testing.T) {
+func TestLastIndexOf(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -112,7 +112,7 @@ func TestOperations_LastIndexOf(t *testing.T) {
 	}
 }
 
-func TestOperations_Count(t *testing.T) {
+func TestCount(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -146,7 +146,7 @@ func TestOperations_Count(t *testing.T) {
 	}
 }
 
-func TestOperations_Distinct(t *testing.T) {
+func TestDistinct(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -173,7 +173,7 @@ func TestOperations_Distinct(t *testing.T) {
 	}
 }
 
-func TestOperations_Partition(t *testing.T) {
+func TestPartition(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -213,7 +213,7 @@ func TestOperations_Partition(t *testing.T) {
 	}
 }
 
-func TestOperations_Permutations(t *testing.T) {
+func TestPermutations(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -241,7 +241,7 @@ func TestOperations_Permutations(t *testing.T) {
 	}
 }
 
-func TestOperations_Combinations(t *testing.T) {
+func TestCombinations(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -272,35 +272,61 @@ func TestOperations_Combinations(t *testing.T) {
 	}
 }
 
-func TestOperations_Shuffle(t *testing.T) {
+func TestShuffle(t *testing.T) {
 	tests := []struct {
-		name  string
-		slice []int
-		// We can't compare the result with a specific value because the shuffle is not deterministic.
-		wantLength int
+		name string
+		want []int
 	}{
 		{
-			name:       "success",
-			slice:      []int{1, 2, 3, 4},
-			wantLength: 4,
+			name: "success",
+			want: []int{1, 2, 3, 4},
 		},
 		{
-			name:       "empty slice",
-			slice:      []int{},
-			wantLength: 0,
+			name: "empty slice",
+			want: []int{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Shuffle(tt.slice)
-			if len(got) != tt.wantLength {
-				t.Errorf("Shuffle() = %v; length = %d, want length %d", got, len(got), tt.wantLength)
+			got := Shuffle(tt.want)
+			if len(got) != len(tt.want) {
+				t.Errorf("Shuffle() = %v; length = %d, want length %d", got, len(got), len(tt.want))
 			}
 		})
 	}
 }
 
-func TestOperations_Zip(t *testing.T) {
+func TestSample(t *testing.T) {
+	tests := []struct {
+		name  string
+		slice []int
+		n     int
+		want  []int
+	}{
+		{
+			name:  "success",
+			slice: []int{1, 2, 3, 4},
+			n:     2,
+			want:  []int{1, 3},
+		},
+		{
+			name:  "empty slice",
+			slice: []int{},
+			n:     2,
+			want:  []int{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Sample(tt.slice, tt.n)
+			if len(got) != len(tt.want) {
+				t.Errorf("Sample() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestZip(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -340,7 +366,7 @@ func TestOperations_Zip(t *testing.T) {
 	}
 }
 
-func TestOperations_Unzip(t *testing.T) {
+func TestUnzip(t *testing.T) {
 	tests := []struct {
 		name  string
 		pairs []Pair[int, string]
@@ -377,7 +403,7 @@ func TestOperations_Unzip(t *testing.T) {
 	}
 }
 
-func TestOperations_Chunk(t *testing.T) {
+func TestChunk(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -419,7 +445,7 @@ func TestOperations_Chunk(t *testing.T) {
 	}
 }
 
-func TestOperations_Flatten(t *testing.T) {
+func TestFlatten(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice [][]int
@@ -450,7 +476,7 @@ func TestOperations_Flatten(t *testing.T) {
 	}
 }
 
-func TestOperations_Intersect(t *testing.T) {
+func TestIntersect(t *testing.T) {
 	tests := []struct {
 		name   string
 		slices [][]int
@@ -497,7 +523,7 @@ func TestOperations_Intersect(t *testing.T) {
 	}
 }
 
-func TestOperations_Difference(t *testing.T) {
+func TestDifference(t *testing.T) {
 	tests := []struct {
 		name   string
 		slices [][]int
@@ -544,7 +570,7 @@ func TestOperations_Difference(t *testing.T) {
 	}
 }
 
-func TestOperations_Union(t *testing.T) {
+func TestUnion(t *testing.T) {
 	tests := []struct {
 		name   string
 		slices [][]int
@@ -584,7 +610,7 @@ func TestOperations_Union(t *testing.T) {
 	}
 }
 
-func TestOperations_IsSorted(t *testing.T) {
+func TestIsSorted(t *testing.T) {
 	tests := []struct {
 		name  string
 		slice []int
@@ -626,7 +652,7 @@ func TestOperations_IsSorted(t *testing.T) {
 	}
 }
 
-func TestOperations_AllMatch(t *testing.T) { //nolint:dupl // generic functions cannot be stored in variables
+func TestAllMatch(t *testing.T) { //nolint:dupl // generic functions cannot be stored in variables
 	tests := []struct {
 		name  string
 		slice []int
@@ -668,7 +694,7 @@ func TestOperations_AllMatch(t *testing.T) { //nolint:dupl // generic functions 
 	}
 }
 
-func TestOperations_AnyMatch(t *testing.T) { //nolint:dupl // generic functions cannot be stored in variables
+func TestAnyMatch(t *testing.T) { //nolint:dupl // generic functions cannot be stored in variables
 	tests := []struct {
 		name  string
 		slice []int
@@ -710,7 +736,7 @@ func TestOperations_AnyMatch(t *testing.T) { //nolint:dupl // generic functions 
 	}
 }
 
-func TestOperations_NoneMatch(t *testing.T) { //nolint:dupl // generic functions cannot be stored in variables
+func TestNoneMatch(t *testing.T) { //nolint:dupl // generic functions cannot be stored in variables
 	tests := []struct {
 		name  string
 		slice []int
