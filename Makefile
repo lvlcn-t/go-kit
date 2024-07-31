@@ -11,10 +11,6 @@ help: ### Display this help
 	@echo "Targets:"
 	@awk 'BEGIN {FS = ":.*?### "} /^[a-zA-Z_-]+:.*?### / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-.PHONY: lint
-lint: ### Runs all pre-commit hooks on all modules
-	@pre-commit run -a
-
 .PHONY: tidy
 tidy: ### Runs go mod tidy on all modules
 	@for module in $(MODULES); do \
