@@ -359,6 +359,15 @@ func TestAuthorizeWithClaims(t *testing.T) {
 			wantStatus: fiber.StatusInternalServerError,
 		},
 		{
+			name:  "Role claims is nil",
+			roles: []string{"admin"},
+			claims: map[string]any{
+				"roles": nil,
+			},
+			key:        "roles",
+			wantStatus: fiber.StatusInternalServerError,
+		},
+		{
 			name:  "No key provided",
 			roles: []string{"admin"},
 			claims: map[string]any{
