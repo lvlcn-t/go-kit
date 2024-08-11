@@ -272,6 +272,9 @@ func getRolesField(val reflect.Value, key string) (reflect.Value, error) {
 		}
 		if val.Kind() == reflect.Interface {
 			val = val.Elem()
+			if !val.IsValid() {
+				return reflect.Value{}, fmt.Errorf("field %q is nil", part)
+			}
 		}
 	}
 	return val, nil

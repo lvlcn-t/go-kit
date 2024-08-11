@@ -23,6 +23,7 @@ const (
 	shutdownTimeout = 15 * time.Second
 )
 
+// Server is the interface for an API server.
 type Server interface {
 	// Run attaches all previously mounted routes and starts the server.
 	// Runs indefinitely until an error occurs, the server shuts down, or the provided context is done.
