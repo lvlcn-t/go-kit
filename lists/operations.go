@@ -1,8 +1,7 @@
 package lists
 
 import (
-	"math/rand"
-	"time"
+	"math/rand/v2"
 )
 
 // Apply applies the function f to each element of the slice, returning a new slice with the results.
@@ -123,7 +122,7 @@ func Combinations[T any](slice []T, n int) [][]T {
 // Shuffle returns a new slice with the elements of the original slice shuffled.
 func Shuffle[T any](slice []T) []T {
 	result := make([]T, len(slice))
-	perm := rand.New(rand.NewSource(time.Now().UnixNano())).Perm(len(slice)) // #nosec G404 // No need for cryptographically secure random number generator
+	perm := rand.Perm(len(slice)) // #nosec G404 // No need for cryptographically secure random number generator
 	for i, v := range perm {
 		result[v] = slice[i]
 	}
@@ -137,7 +136,7 @@ func Sample[T any](slice []T, n int) []T {
 	}
 
 	result := make([]T, n)
-	perm := rand.New(rand.NewSource(time.Now().UnixNano())).Perm(len(slice)) // #nosec G404 // No need for cryptographically secure random number generator
+	perm := rand.Perm(len(slice)) // #nosec G404 // No need for cryptographically secure random number generator
 	for i := 0; i < n; i++ {
 		result[i] = slice[perm[i]]
 	}
