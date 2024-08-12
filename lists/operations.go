@@ -59,24 +59,24 @@ func Distinct[T comparable](slice []T) []T {
 
 // Partition returns two slices, the first containing the elements of the original slice that satisfy the predicate f,
 // and the second containing the elements that do not satisfy the predicate.
-func Partition[T any](slice []T, f Predicate[T]) (trueS, falseS []T) {
-	trueSlice := make([]T, 0, len(slice))
-	falseSlice := make([]T, 0, len(slice))
+func Partition[T any](slice []T, f Predicate[T]) (matched, unmatched []T) {
+	matched = make([]T, 0, len(slice))
+	unmatched = make([]T, 0, len(slice))
 	for _, v := range slice {
 		if f(v) {
-			trueSlice = append(trueSlice, v)
-		} else {
-			falseSlice = append(falseSlice, v)
+			matched = append(matched, v)
+			continue
 		}
+		unmatched = append(unmatched, v)
 	}
-	return trueSlice, falseSlice
+	return matched, unmatched
 }
 
 // Permutations returns all possible permutations of the slice.
 func Permutations[T any](slice []T) [][]T {
-	var arrangeElements func([]T, int)
+	var permute func([]T, int)
 	result := [][]T{}
-	arrangeElements = func(arr []T, n int) {
+	permute = func(arr []T, n int) {
 		if n == 1 {
 			tmp := make([]T, len(arr))
 			copy(tmp, arr)
@@ -85,7 +85,7 @@ func Permutations[T any](slice []T) [][]T {
 		}
 
 		for i := 0; i < n; i++ {
-			arrangeElements(arr, n-1)
+			permute(arr, n-1)
 			if n%2 == 1 {
 				arr[i], arr[n-1] = arr[n-1], arr[i]
 				continue
@@ -93,7 +93,7 @@ func Permutations[T any](slice []T) [][]T {
 			arr[0], arr[n-1] = arr[n-1], arr[0]
 		}
 	}
-	arrangeElements(slice, len(slice))
+	permute(slice, len(slice))
 	return result
 }
 
