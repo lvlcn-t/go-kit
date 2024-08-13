@@ -33,6 +33,6 @@ jobs:
       private_go_server: ""
       before_tests: ""
       additional_args: -v
-      package: ./config
+      package: ./metrics/...
     secrets:
       PRIVATE_GO_SERVER_TOKEN: ${{ secrets.PRIVATE_GO_SERVER_TOKEN }}
