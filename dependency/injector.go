@@ -2,7 +2,6 @@ package dependency
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"sync"
 )
@@ -16,7 +15,6 @@ type Injector interface {
 	//   - iface: The [reflect.Type] of the interface under which the dependency should be registered. Defaults to the type of the provided dependency.
 	//   - singleton: If true, the DI container will ensure that only one instance of the dependency is created and shared.
 	//   - factory: An optional function that creates a new instance of the dependency. If provided, this function is used to create instances instead of the passed 'dep' value.
-	//   - overwrite: An optional boolean flag that, if set to true, allows overwriting an existing dependency of the same interface type.
 	//
 	// Usage:
 	//
@@ -24,7 +22,7 @@ type Injector interface {
 	//	if err != nil {
 	//	    log.Fatal(err)
 	//	}
-	Provide(dep any, iface reflect.Type, singleton bool, factory func() any, overwrite ...bool) error
+	Provide(dep any, iface reflect.Type, singleton bool, factory func() any) error
 	// Resolve returns either the first dependency of the given type or the given index.
 	// Returns an error if the type is nil or if the dependency is not found.
 	Resolve(t reflect.Type, i ...int) (any, error)
@@ -44,7 +42,6 @@ var container Injector = NewDIContainer()
 //   - dep: The dependency you want to register.
 //   - singleton: If true, the DI container will ensure that only one instance of the dependency is created and shared.
 //   - factory: An optional function that creates a new instance of the dependency. If provided, this function is used to create instances instead of the passed 'dep' value.
-//   - overwrite: An optional boolean flag that, if set to true, allows overwriting an existing dependency of the same interface type.
 //
 // Usage:
 //
@@ -54,14 +51,14 @@ var container Injector = NewDIContainer()
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func Provide[T any](dep T, singleton bool, factory func() T, overwrite ...bool) error {
+func Provide[T any](dep T, singleton bool, factory func() T) error {
 	fun := (func() any)(nil)
 	if factory != nil {
 		fun = func() any {
 			return factory()
 		}
 	}
-	return container.Provide(dep, reflect.TypeOf((*T)(nil)).Elem(), singleton, fun, overwrite...)
+	return container.Provide(dep, reflect.TypeOf((*T)(nil)).Elem(), singleton, fun)
 }
 
 // Resolve returns either the first dependency of the given type or the given index.
@@ -131,7 +128,6 @@ func NewDIContainer() Injector {
 //   - iface: The [reflect.Type] of the interface under which the dependency should be registered. Defaults to the type of the provided dependency.
 //   - singleton: If true, the DI container will ensure that only one instance of the dependency is created and shared.
 //   - factory: An optional function that creates a new instance of the dependency. If provided, this function is used to create instances instead of the passed 'dep' value.
-//   - overwrite: An optional boolean flag that, if set to true, allows overwriting an existing dependency of the same interface type.
 //
 // Usage:
 //
@@ -139,7 +135,7 @@ func NewDIContainer() Injector {
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func (c *injector) Provide(dep any, iface reflect.Type, singleton bool, factory func() any, overwrite ...bool) error {
+func (c *injector) Provide(dep any, iface reflect.Type, singleton bool, factory func() any) error {
 	if dep == nil && factory == nil {
 		return errors.New("dependency and factory are both nil")
 	}
@@ -153,10 +149,6 @@ func (c *injector) Provide(dep any, iface reflect.Type, singleton bool, factory 
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, ok := c.dependencies[iface]; ok && (len(overwrite) == 0 || !overwrite[0]) {
-		return fmt.Errorf("dependency of type %T already exists", dep)
-	}
-
 	c.dependencies[iface] = append(c.dependencies[iface], dependency{
 		value:     reflect.ValueOf(dep),
 		factory:   factory,
