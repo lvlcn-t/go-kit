@@ -58,6 +58,8 @@ github.com/lvlcn-t/go-kit/apimanager v0.3.0 h1:Xuoq9WlpWs3KumlfxXxH9N8gCv752KUzH
 github.com/lvlcn-t/go-kit/apimanager v0.3.0/go.mod h1:aiM6EyrOwh2cEVaSLbRKFriAxws0DA0i04Qt6VHHi4I=
 github.com/lvlcn-t/go-kit/config v0.3.0 h1:HwwOGHqMk0OKNAm4woocAE6wBd1TyUfFcpGQFhM3eIk=
 github.com/lvlcn-t/go-kit/config v0.3.0/go.mod h1:WE3kJpKDRHkpRnEwb1vseIUXLWLm+YsOSidnAk/JCE4=
+github.com/lvlcn-t/go-kit/dependency v0.0.0-20240813221656-294916221526 h1:z9uw94Tlpt0pTIwdCggqy55uLw3jDhCDhCch7v8D0hA=
+github.com/lvlcn-t/go-kit/dependency v0.0.0-20240813221656-294916221526/go.mod h1:FISsdr7AtNPEmuG4dwLonDndBaKnFi7Ba7RH/5d5EhU=
 github.com/lvlcn-t/go-kit/executors v0.3.0 h1:/gUgfDsiYvCUk7+3zT0X72axlIXuaZgN4HakKPNT1AI=
 github.com/lvlcn-t/go-kit/executors v0.3.0/go.mod h1:oW2l5yOEt6Ts+cLnP2ATDz09pxrr5EmniOdhH9BWMS4=
 github.com/lvlcn-t/go-kit/lists v0.3.0 h1:MlxQdLXavtR010oDcuLx0L2Qcz/Ib/OwFTcme+1BJr8=

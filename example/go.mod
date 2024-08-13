@@ -7,12 +7,22 @@ require (
 	github.com/gofiber/fiber/v3 v3.0.0-beta.3
 	github.com/lvlcn-t/go-kit/apimanager v0.3.0
 	github.com/lvlcn-t/go-kit/config v0.3.0
+	github.com/lvlcn-t/go-kit/dependency v0.0.0-20240813221656-294916221526
 	github.com/lvlcn-t/go-kit/executors v0.3.0
 	github.com/lvlcn-t/go-kit/metrics v0.3.0
 	github.com/lvlcn-t/loggerhead v0.3.1
 	github.com/prometheus/client_golang v1.19.1
 	go.opentelemetry.io/otel v1.28.0
 	golang.org/x/oauth2 v0.22.0
+)
+
+// Replace go-kit dependencies with local paths
+replace (
+	github.com/lvlcn-t/go-kit/apimanager => ../apimanager
+	github.com/lvlcn-t/go-kit/config => ../config
+	github.com/lvlcn-t/go-kit/dependency => ../dependency
+	github.com/lvlcn-t/go-kit/executors => ../executors
+	github.com/lvlcn-t/metrics => ../metrics
 )
 
 require (
