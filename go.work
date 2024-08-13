@@ -3,6 +3,7 @@ go 1.22
 use (
 	./apimanager
 	./config
+	./dependency
 	./example
 	./executors
 	./lists
