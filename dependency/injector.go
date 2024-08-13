@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"sync"
 )
@@ -140,10 +141,33 @@ func (c *injector) Provide(dep any, iface reflect.Type, singleton bool, factory 
 		return errors.New("dependency and factory are both nil")
 	}
 
+	if dep == nil {
+		dep = factory()
+		if dep == nil {
+			return errors.New("dependency is nil")
+		}
+	}
+
 	if iface == nil {
 		iface = reflect.TypeOf(dep)
 		if iface.Kind() == reflect.Pointer {
 			iface = iface.Elem()
+		}
+	}
+
+	switch iface.Kind() {
+	case reflect.Interface:
+		if !reflect.TypeOf(dep).Implements(iface) {
+			return fmt.Errorf("dependency (%s) does not implement interface (%s)", reflect.TypeOf(dep), iface)
+		}
+	default:
+		t := reflect.TypeOf(dep)
+		if t.Kind() == reflect.Pointer {
+			t = t.Elem()
+		}
+
+		if t.Kind() != iface.Kind() {
+			return fmt.Errorf("dependency type (%s) does not match interface type (%s)", reflect.TypeOf(dep), iface)
 		}
 	}
 
@@ -183,6 +207,10 @@ func (c *injector) Resolve(t reflect.Type, i ...int) (any, error) {
 	}
 
 	dep := &deps[index]
+	if !dep.value.IsValid() && dep.factory == nil {
+		return nil, errors.New("dependency is not valid")
+	}
+
 	if dep.singleton {
 		dep.once.Do(func() {
 			if dep.factory != nil {
