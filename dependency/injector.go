@@ -16,6 +16,7 @@ type Injector interface {
 	//   - iface: The [reflect.Type] of the interface under which the dependency should be registered. Defaults to the type of the provided dependency.
 	//   - singleton: If true, the DI container will ensure that only one instance of the dependency is created and shared.
 	//   - factory: An optional function that creates a new instance of the dependency. If provided, this function is used to create instances instead of the passed 'dep' value.
+	//   - name: An optional name for the dependency. If not provided, the name defaults to the type name of the dependency.
 	//
 	// Usage:
 	//
@@ -23,10 +24,16 @@ type Injector interface {
 	//	if err != nil {
 	//	    log.Fatal(err)
 	//	}
-	Provide(dep any, iface reflect.Type, singleton bool, factory func() any) error
-	// Resolve returns either the first dependency of the given type or the given index.
+	Provide(dep any, iface reflect.Type, singleton bool, factory func() any, name ...string) error
+	// Resolve returns a dependency of the given interface type and name.
 	// Returns an error if the type is nil or if the dependency is not found.
-	Resolve(t reflect.Type, i ...int) (any, error)
+	//
+	// The following rules apply when resolving a dependency:
+	//   - If no name is provided, it tries to resolve the dependency by the type name.
+	//     If the name is not found, it resolves the first dependency of the given type.
+	//   - If an empty string is provided as the name, it resolves the first dependency of the given type.
+	//   - If "-1" is provided as the name, it resolves the last dependency of the given type.
+	Resolve(t reflect.Type, name ...string) (any, error)
 	// ResolveAll returns all dependencies of the given interface type.
 	// Returns an error if the type is nil or if no dependencies are found.
 	ResolveAll(t reflect.Type) ([]any, error)
@@ -37,43 +44,48 @@ type Injector interface {
 // container is the default DI container
 var container Injector = NewDIContainer()
 
-// Provide registers a dependency with the DI container under a specified interface type.
+// Provide registers a dependency with the DI container under the given type.
 //
 // Parameters:
 //   - dep: The dependency you want to register.
 //   - singleton: If true, the DI container will ensure that only one instance of the dependency is created and shared.
 //   - factory: An optional function that creates a new instance of the dependency. If provided, this function is used to create instances instead of the passed 'dep' value.
+//   - name: An optional name for the dependency. If not provided, the name defaults to the type name of the dependency.
 //
 // Usage:
 //
-//	// Initialize a new instance of an implementation of MyInterface that should be registered as the ladder.
-//	var instance MyInterface = &MyConcreteType{}
-//	err := Provide(instance, false, nil)
+//	err := dependency.Provide[MyInterface](&MyConcreteType{}, false, nil)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func Provide[T any](dep T, singleton bool, factory func() T) error {
+func Provide[T any](dep T, singleton bool, factory func() T, name ...string) error {
 	fun := (func() any)(nil)
 	if factory != nil {
 		fun = func() any {
 			return factory()
 		}
 	}
-	return container.Provide(dep, reflect.TypeOf((*T)(nil)).Elem(), singleton, fun)
+	return container.Provide(dep, reflect.TypeOf((*T)(nil)).Elem(), singleton, fun, name...)
 }
 
-// Resolve returns either the first dependency of the given type or the given index.
+// Resolve returns a dependency of the given type and name.
 // Returns an error if the type is nil or if the dependency is not found.
-func Resolve[T any](i ...int) (T, error) {
+//
+// The following rules apply when resolving a dependency:
+//   - If no name is provided, it tries to resolve the dependency by the type name.
+//     If the name is not found, it resolves the first dependency of the given type.
+//   - If an empty string is provided as the name, it resolves the first dependency of the given type.
+//   - If "-1" is provided as the name, it resolves the last dependency of the given type.
+func Resolve[T any](name ...string) (T, error) {
 	var empty T
-	v, err := container.Resolve(reflect.TypeOf((*T)(nil)).Elem(), i...)
+	v, err := container.Resolve(reflect.TypeOf((*T)(nil)).Elem(), name...)
 	if err != nil {
 		return empty, err
 	}
 	return v.(T), nil
 }
 
-// ResolveAll returns all dependencies of the given interface type.
+// ResolveAll returns all dependencies of the given type.
 // Returns an error if the type is nil or if no dependencies are found.
 func ResolveAll[T any]() ([]T, error) {
 	v, err := container.ResolveAll(reflect.TypeOf((*T)(nil)).Elem())
@@ -100,6 +112,16 @@ type injector struct {
 	mu sync.RWMutex
 	// dependencies is a map of types to their respective list of dependencies
 	dependencies map[reflect.Type][]dependency
+	// registry is a map of dependency names to their respective interface type and implementation type
+	registry map[string]dependencyInfo
+}
+
+// dependencyInfo is a struct that holds information about a dependency.
+type dependencyInfo struct {
+	// iface is the interface type of the dependency
+	iface reflect.Type
+	// dep is the implementation type of the dependency
+	dep reflect.Type
 }
 
 // dependency is a dependency that can be stored in the injector.
@@ -119,6 +141,7 @@ func NewDIContainer() Injector {
 	return &injector{
 		mu:           sync.RWMutex{},
 		dependencies: map[reflect.Type][]dependency{},
+		registry:     map[string]dependencyInfo{},
 	}
 }
 
@@ -129,6 +152,7 @@ func NewDIContainer() Injector {
 //   - iface: The [reflect.Type] of the interface under which the dependency should be registered. Defaults to the type of the provided dependency.
 //   - singleton: If true, the DI container will ensure that only one instance of the dependency is created and shared.
 //   - factory: An optional function that creates a new instance of the dependency. If provided, this function is used to create instances instead of the passed 'dep' value.
+//   - name: An optional name for the dependency. If not provided, the name defaults to the type name of the dependency.
 //
 // Usage:
 //
@@ -136,7 +160,75 @@ func NewDIContainer() Injector {
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func (c *injector) Provide(dep any, iface reflect.Type, singleton bool, factory func() any) error {
+func (c *injector) Provide(dep any, iface reflect.Type, singleton bool, factory func() any, name ...string) error {
+	if len(name) > 0 {
+		if name[0] == "-1" {
+			return fmt.Errorf("name cannot be a reserved keyword: %q", name[0])
+		}
+		return c.provide(dep, iface, name[0], singleton, factory)
+	}
+	return c.provide(dep, iface, "", singleton, factory)
+}
+
+// Resolve returns a dependency of the given interface type and name.
+// Returns an error if the type is nil or if the dependency is not found.
+//
+// The following rules apply when resolving a dependency:
+//   - If no name is provided, it tries to resolve the dependency by the type name.
+//     If the name is not found, it resolves the first dependency of the given type.
+//   - If an empty string is provided as the name, it resolves the first dependency of the given type.
+//   - If "-1" is provided as the name, it resolves the last dependency of the given type.
+func (c *injector) Resolve(t reflect.Type, name ...string) (any, error) {
+	if t == nil {
+		return nil, errors.New("type is nil")
+	}
+
+	if len(name) > 0 {
+		return c.resolve(t, name[0])
+	}
+	return c.resolve(t, t.String())
+}
+
+// ResolveAll returns all dependencies of the given interface type.
+// Returns an error if the type is nil or if no dependencies are found.
+func (c *injector) ResolveAll(t reflect.Type) ([]any, error) {
+	if t == nil {
+		return nil, errors.New("type is nil")
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	deps, exists := c.dependencies[t]
+	if !exists || len(deps) == 0 {
+		return nil, &ErrDependencyNotFound{}
+	}
+
+	var results []any
+	for i := range deps {
+		instance, err := c.instantiate(&deps[i])
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, instance)
+	}
+
+	return results, nil
+}
+
+// Delete removes a dependency from the DI container.
+func (c *injector) Delete(t reflect.Type) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.dependencies, t)
+	for name, info := range c.registry {
+		if info.iface == t {
+			delete(c.registry, name)
+		}
+	}
+}
+
+// provide registers a dependency with the DI container.
+func (c *injector) provide(dep any, iface reflect.Type, name string, singleton bool, factory func() any) error {
 	if dep == nil && factory == nil {
 		return errors.New("dependency and factory are both nil")
 	}
@@ -178,35 +270,55 @@ func (c *injector) Provide(dep any, iface reflect.Type, singleton bool, factory 
 		factory:   factory,
 		singleton: singleton,
 	})
+
+	if name == "" {
+		name = reflect.TypeOf(dep).String()
+	}
+	c.registry[name] = dependencyInfo{
+		iface: iface,
+		dep:   reflect.TypeOf(dep),
+	}
 	return nil
 }
 
-// Resolve returns either the first dependency of the given type or the given index.
-// Returns an error if the type is nil or if the dependency is not found.
-func (c *injector) Resolve(t reflect.Type, i ...int) (any, error) {
-	if t == nil {
-		return nil, errors.New("type is nil")
-	}
-
+// resolve returns a dependency of the given interface type and name.
+func (c *injector) resolve(t reflect.Type, name string) (any, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	deps, ok := c.dependencies[t]
 	if !ok || len(deps) == 0 {
-		return nil, &errDependencyNotFound{}
+		return nil, &ErrDependencyNotFound{}
+	}
+
+	switch name {
+	case "":
+		return c.instantiate(&deps[0])
+	case "-1":
+		return c.instantiate(&deps[len(deps)-1])
+	}
+
+	info, ok := c.registry[name]
+	if !ok {
+		return nil, &ErrDependencyNotFound{}
+	}
+
+	if info.iface != t {
+		return nil, errors.New("interface type does not match")
 	}
 
 	index := 0
-	if len(i) > 0 {
-		index = i[0]
-	}
-	if index < -1 || index >= len(deps) {
-		return nil, errors.New("index out of range")
-	}
-	if index == -1 {
-		index = len(deps) - 1
+	for i := range deps {
+		if deps[i].value.Type() == info.dep {
+			index = i
+			break
+		}
 	}
 
-	dep := &deps[index]
+	return c.instantiate(&deps[index])
+}
+
+// instantiate creates a new instance of a dependency.
+func (*injector) instantiate(dep *dependency) (any, error) {
 	if !dep.value.IsValid() && dep.factory == nil {
 		return nil, errors.New("dependency is not valid")
 	}
@@ -227,64 +339,21 @@ func (c *injector) Resolve(t reflect.Type, i ...int) (any, error) {
 	return reflect.New(dep.value.Type()).Elem().Interface(), nil
 }
 
-// ResolveAll returns all dependencies of the given interface type.
-// Returns an error if the type is nil or if no dependencies are found.
-func (c *injector) ResolveAll(t reflect.Type) ([]any, error) {
-	if t == nil {
-		return nil, errors.New("type is nil")
-	}
+var _ error = (*ErrDependencyNotFound)(nil)
 
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	deps, exists := c.dependencies[t]
-	if !exists || len(deps) == 0 {
-		return nil, &errDependencyNotFound{}
-	}
+// ErrDependencyNotFound is an error that is returned when a dependency is not found.
+type ErrDependencyNotFound struct{}
 
-	var results []any
-	for i := range deps {
-		dep := &deps[i]
-		if dep.singleton {
-			dep.once.Do(func() {
-				if dep.factory != nil {
-					instance := dep.factory()
-					dep.value = reflect.ValueOf(instance)
-				}
-			})
-			results = append(results, dep.value.Interface())
-			continue
-		}
-
-		if dep.factory != nil {
-			results = append(results, dep.factory())
-			continue
-		}
-
-		results = append(results, dep.value.Interface())
-	}
-
-	return results, nil
-}
-
-// Delete removes a dependency from the DI container.
-func (c *injector) Delete(t reflect.Type) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.dependencies, t)
-}
-
-var _ error = (*errDependencyNotFound)(nil)
-
-type errDependencyNotFound struct{}
-
-func (e errDependencyNotFound) Error() string {
+// Error returns the error message.
+func (e ErrDependencyNotFound) Error() string {
 	return "dependency not found"
 }
 
-func (e *errDependencyNotFound) Is(target error) bool {
-	_, ok := target.(*errDependencyNotFound)
+// Is checks if the target error is an [ErrDependencyNotFound].
+func (e *ErrDependencyNotFound) Is(target error) bool {
+	_, ok := target.(*ErrDependencyNotFound)
 	if !ok {
-		_, ok = target.(errDependencyNotFound)
+		_, ok = target.(ErrDependencyNotFound)
 	}
 	return ok
 }

@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+const something = "something"
+
 type TestInterface interface {
 	DoSomething() string
 }
@@ -12,7 +14,7 @@ type TestInterface interface {
 type TestImplementation struct{}
 
 func (t *TestImplementation) DoSomething() string {
-	return "something"
+	return something
 }
 
 func TestInjector_Provide(t *testing.T) {
@@ -22,6 +24,7 @@ func TestInjector_Provide(t *testing.T) {
 		dep       any
 		singleton bool
 		factory   func() any
+		depName   string
 		wantErr   bool
 	}{
 		{
@@ -30,6 +33,7 @@ func TestInjector_Provide(t *testing.T) {
 			dep:       &TestImplementation{},
 			singleton: false,
 			factory:   nil,
+			depName:   "",
 			wantErr:   false,
 		},
 		{
@@ -38,6 +42,7 @@ func TestInjector_Provide(t *testing.T) {
 			dep:       nil,
 			singleton: false,
 			factory:   nil,
+			depName:   "",
 			wantErr:   true,
 		},
 		{
@@ -48,7 +53,17 @@ func TestInjector_Provide(t *testing.T) {
 			factory: func() any {
 				return &TestImplementation{}
 			},
+			depName: "",
 			wantErr: false,
+		},
+		{
+			name:      "Provide with named dependency",
+			iface:     reflect.TypeOf((*TestInterface)(nil)).Elem(),
+			dep:       &TestImplementation{},
+			singleton: false,
+			factory:   nil,
+			depName:   "TestImplementation1",
+			wantErr:   false,
 		},
 		{
 			name:      "Provide with factory function that returns nil",
@@ -58,6 +73,7 @@ func TestInjector_Provide(t *testing.T) {
 			factory: func() any {
 				return nil
 			},
+			depName: "",
 			wantErr: true,
 		},
 		{
@@ -66,6 +82,7 @@ func TestInjector_Provide(t *testing.T) {
 			dep:       &TestImplementation{},
 			singleton: false,
 			factory:   nil,
+			depName:   "",
 			wantErr:   false,
 		},
 		{
@@ -74,6 +91,7 @@ func TestInjector_Provide(t *testing.T) {
 			dep:       nil,
 			singleton: false,
 			factory:   nil,
+			depName:   "",
 			wantErr:   true,
 		},
 		{
@@ -82,6 +100,7 @@ func TestInjector_Provide(t *testing.T) {
 			dep:       &TestImplementation{},
 			singleton: false,
 			factory:   nil,
+			depName:   "",
 			wantErr:   true,
 		},
 		{
@@ -90,6 +109,16 @@ func TestInjector_Provide(t *testing.T) {
 			dep:       "invalid",
 			singleton: false,
 			factory:   nil,
+			depName:   "",
+			wantErr:   true,
+		},
+		{
+			name:      "Provide with invalid name",
+			iface:     reflect.TypeOf((*TestInterface)(nil)).Elem(),
+			dep:       &TestImplementation{},
+			singleton: false,
+			factory:   nil,
+			depName:   "-1",
 			wantErr:   true,
 		},
 	}
@@ -97,10 +126,21 @@ func TestInjector_Provide(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := NewDIContainer()
-			err := c.Provide(tt.dep, tt.iface, tt.singleton, tt.factory)
+			err := c.Provide(tt.dep, tt.iface, tt.singleton, tt.factory, tt.depName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("injector.Provide() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+
+			if !tt.wantErr {
+				if _, ok := c.(*injector).dependencies[tt.iface]; !ok && tt.iface != nil {
+					t.Errorf("injector.Provide() did not store dependency")
+				}
+				if tt.depName != "" {
+					if _, ok := c.(*injector).registry[tt.depName]; !ok {
+						t.Errorf("injector.Provide() did not store dependency name")
+					}
+				}
 			}
 		})
 	}
@@ -113,15 +153,25 @@ func TestInjector_Resolve(t *testing.T) {
 		dep       any
 		singleton bool
 		factory   func() any
-		index     []int
+		depName   string
 		wantErr   bool
 	}{
 		{
-			name:      "Resolve existing dependency",
+			name:      "Resolve existing dependency by type name",
 			iface:     reflect.TypeOf((*TestInterface)(nil)).Elem(),
 			dep:       &TestImplementation{},
 			singleton: false,
 			factory:   nil,
+			depName:   "",
+			wantErr:   false,
+		},
+		{
+			name:      "Resolve existing named dependency",
+			iface:     reflect.TypeOf((*TestInterface)(nil)).Elem(),
+			dep:       &TestImplementation{},
+			singleton: false,
+			factory:   nil,
+			depName:   "TestImplementation1",
 			wantErr:   false,
 		},
 		{
@@ -130,6 +180,7 @@ func TestInjector_Resolve(t *testing.T) {
 			dep:       nil,
 			singleton: false,
 			factory:   nil,
+			depName:   "",
 			wantErr:   true,
 		},
 		{
@@ -140,6 +191,7 @@ func TestInjector_Resolve(t *testing.T) {
 			factory: func() any {
 				return &TestImplementation{}
 			},
+			depName: "",
 			wantErr: false,
 		},
 		{
@@ -148,34 +200,35 @@ func TestInjector_Resolve(t *testing.T) {
 			dep:       &TestImplementation{},
 			singleton: true,
 			factory:   nil,
+			depName:   "",
 			wantErr:   false,
 		},
 		{
-			name:      "Resolve with valid index",
+			name:      "Resolve first dependency with empty name",
 			iface:     reflect.TypeOf((*TestInterface)(nil)).Elem(),
 			dep:       &TestImplementation{},
 			singleton: false,
 			factory:   nil,
-			index:     []int{0},
+			depName:   "",
 			wantErr:   false,
 		},
 		{
-			name:      "Resolve with invalid index",
+			name:      "Resolve last dependency with '-1' name",
 			iface:     reflect.TypeOf((*TestInterface)(nil)).Elem(),
 			dep:       &TestImplementation{},
 			singleton: false,
 			factory:   nil,
-			index:     []int{1},
+			depName:   "-1",
+			wantErr:   false,
+		},
+		{
+			name:      "Resolve with invalid name",
+			iface:     reflect.TypeOf((*TestInterface)(nil)).Elem(),
+			dep:       &TestImplementation{},
+			singleton: false,
+			factory:   nil,
+			depName:   "nonexistent",
 			wantErr:   true,
-		},
-		{
-			name:      "Resolve with negative index",
-			iface:     reflect.TypeOf((*TestInterface)(nil)).Elem(),
-			dep:       &TestImplementation{},
-			singleton: false,
-			factory:   nil,
-			index:     []int{-1},
-			wantErr:   false,
 		},
 		{
 			name:      "Resolve non-singleton dependency with factory function",
@@ -185,6 +238,7 @@ func TestInjector_Resolve(t *testing.T) {
 			factory: func() any {
 				return &TestImplementation{}
 			},
+			depName: "",
 			wantErr: false,
 		},
 		{
@@ -193,6 +247,16 @@ func TestInjector_Resolve(t *testing.T) {
 			dep:       nil,
 			singleton: false,
 			factory:   nil,
+			depName:   "",
+			wantErr:   true,
+		},
+		{
+			name:      "Resolve with type mismatch between given type and dependency name",
+			iface:     reflect.TypeOf((*TestInterface)(nil)).Elem(),
+			dep:       &TestImplementation{},
+			singleton: false,
+			factory:   nil,
+			depName:   "mismatch",
 			wantErr:   true,
 		},
 	}
@@ -200,20 +264,37 @@ func TestInjector_Resolve(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := NewDIContainer()
-			if tt.dep == nil && tt.factory == nil {
+			dep := tt.dep
+			iface := tt.iface
+			name := tt.depName
+			switch {
+			case tt.dep == nil && tt.factory == nil:
 				c.(*injector).dependencies[tt.iface] = []dependency{{
 					value:     reflect.ValueOf(tt.dep),
 					factory:   tt.factory,
 					singleton: false,
 				}}
-			} else {
-				err := c.Provide(tt.dep, tt.iface, tt.singleton, tt.factory)
+			case tt.depName == "mismatch":
+				c.(*injector).dependencies[tt.iface] = []dependency{{
+					value:     reflect.ValueOf(tt.dep),
+					factory:   tt.factory,
+					singleton: tt.singleton,
+				}}
+				c.(*injector).registry[tt.depName] = dependencyInfo{
+					iface: reflect.TypeOf((*string)(nil)).Elem(),
+					dep:   reflect.TypeOf((*TestImplementation)(nil)).Elem(),
+				}
+			case tt.depName == "-1" || tt.depName == "nonexistent":
+				name = ""
+				fallthrough
+			default:
+				err := c.Provide(dep, iface, tt.singleton, tt.factory, name)
 				if err != nil {
 					t.Fatalf("injector.Provide() setup failed: %v", err)
 				}
 			}
 
-			val, err := c.Resolve(tt.iface, tt.index...)
+			val, err := c.Resolve(tt.iface, tt.depName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("injector.Resolve() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -227,8 +308,8 @@ func TestInjector_Resolve(t *testing.T) {
 					t.Errorf("injector.Resolve() returned wrong type")
 				}
 
-				if iface.DoSomething() != "something" {
-					t.Errorf("injector.Resolve().DoSomething() = %s, want %s", iface.DoSomething(), "something")
+				if iface.DoSomething() != something {
+					t.Errorf("injector.Resolve().DoSomething() = %s, want %s", iface.DoSomething(), something)
 				}
 			}
 		})
@@ -287,9 +368,29 @@ func TestInjector_ResolveAll(t *testing.T) {
 				c.(*injector).dependencies[tt.iface] = []dependency{}
 			}
 
-			_, err := c.ResolveAll(tt.iface)
+			results, err := c.ResolveAll(tt.iface)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("injector.ResolveAll() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr {
+				if len(results) != len(tt.deps) {
+					t.Errorf("injector.ResolveAll() returned %d dependencies, want %d", len(results), len(tt.deps))
+				}
+
+				for i, dep := range results {
+					if dep == nil && tt.deps[i] != nil {
+						t.Errorf("injector.ResolveAll() returned nil at index %d, want non-nil", i)
+					}
+					iface, ok := dep.(TestInterface)
+					if !ok {
+						t.Errorf("injector.ResolveAll() returned wrong type")
+					}
+
+					if iface.DoSomething() != something {
+						t.Errorf("injector.ResolveAll().DoSomething() = %s, want %s", iface.DoSomething(), something)
+					}
+				}
 			}
 		})
 	}

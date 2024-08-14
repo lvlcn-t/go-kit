@@ -24,24 +24,24 @@ func (m *MySecondImplementation) DoSomething() {
 
 func main() {
 	// Provide a dependency.
-	err := dependency.Provide[MyInterface](&MyFirstImplementation{}, false, nil)
+	err := dependency.Provide[MyInterface](&MyFirstImplementation{}, false, nil, "my-first-implementation")
 	if err != nil {
 		panic(err)
 	}
 
 	// Provide another dependency.
-	err = dependency.Provide[MyInterface](&MySecondImplementation{}, false, nil)
+	err = dependency.Provide[MyInterface](&MySecondImplementation{}, false, nil, "my-second-implementation")
 	if err != nil {
 		panic(err)
 	}
 
 	// Resolve the dependencies.
-	first, err := dependency.Resolve[MyInterface]()
+	first, err := dependency.Resolve[MyInterface]("my-first-implementation")
 	if err != nil {
 		panic(err)
 	}
 
-	second, err := dependency.Resolve[MyInterface](1)
+	second, err := dependency.Resolve[MyInterface]("my-second-implementation")
 	if err != nil {
 		panic(err)
 	}
