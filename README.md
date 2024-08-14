@@ -28,8 +28,9 @@ The repository is divided into several modules, each of which provides a differe
 
 - [apimanager](/apimanager/README.md): A simple way to manage an API server with the ability to add routes, route-groups, and middlewares. It is built on top of the [gofiber/fiber](https://github.com/gofiber/fiber) framework.
 - [config](/config/README.md): A wrapper around [spf13/viper](https://github.com/spf13/viper) to load configuration files with into a struct and validate them.
-- [lists](/lists/lists.go): A collection of functions to complement the [`slices`](https://pkg.go.dev/slices) package in the standard library.
+- [dependency](/dependency/README.md): A simple dependency injection container that allows you to register and resolve dependencies.
 - [executors](/executors/README.md): Useful executors and policies to handle common scenarios like retries with exponential backoff and more.
+- [lists](/lists/lists.go): A collection of functions to complement the [`slices`](https://pkg.go.dev/slices) package in the standard library.
 - [metrics](/metrics/README.md): A set of tools to collect and expose metrics for a Go application.
 
 ### Documentations
