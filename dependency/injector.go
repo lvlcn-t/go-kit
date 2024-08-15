@@ -205,7 +205,7 @@ func (c *injector) ResolveAll(t reflect.Type) ([]any, error) {
 
 	var results []any
 	for i := range deps {
-		instance, err := c.instantiate(&deps[i])
+		instance, err := deps[i].instantiate()
 		if err != nil {
 			return nil, err
 		}
@@ -292,9 +292,9 @@ func (c *injector) resolve(t reflect.Type, name string) (any, error) {
 
 	switch name {
 	case "":
-		return c.instantiate(&deps[0])
+		return deps[0].instantiate()
 	case "-1":
-		return c.instantiate(&deps[len(deps)-1])
+		return deps[len(deps)-1].instantiate()
 	}
 
 	info, ok := c.registry[name]
@@ -314,29 +314,29 @@ func (c *injector) resolve(t reflect.Type, name string) (any, error) {
 		}
 	}
 
-	return c.instantiate(&deps[index])
+	return deps[index].instantiate()
 }
 
 // instantiate creates a new instance of a dependency.
-func (*injector) instantiate(dep *dependency) (any, error) {
-	if !dep.value.IsValid() && dep.factory == nil {
+func (d *dependency) instantiate() (any, error) {
+	if !d.value.IsValid() && d.factory == nil {
 		return nil, errors.New("dependency is not valid")
 	}
 
-	if dep.singleton {
-		dep.once.Do(func() {
-			if dep.factory != nil {
-				instance := dep.factory()
-				dep.value = reflect.ValueOf(instance)
+	if d.singleton {
+		d.once.Do(func() {
+			if d.factory != nil {
+				instance := d.factory()
+				d.value = reflect.ValueOf(instance)
 			}
 		})
-		return dep.value.Interface(), nil
+		return d.value.Interface(), nil
 	}
 
-	if dep.factory != nil {
-		return dep.factory(), nil
+	if d.factory != nil {
+		return d.factory(), nil
 	}
-	return reflect.New(dep.value.Type()).Elem().Interface(), nil
+	return reflect.New(d.value.Type()).Elem().Interface(), nil
 }
 
 var _ error = (*ErrDependencyNotFound)(nil)
