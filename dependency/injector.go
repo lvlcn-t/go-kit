@@ -327,16 +327,30 @@ func (d *dependency) instantiate() (any, error) {
 		d.once.Do(func() {
 			if d.factory != nil {
 				instance := d.factory()
-				d.value = reflect.ValueOf(instance)
+				val := reflect.ValueOf(instance)
+				if val.IsValid() {
+					d.value = val
+				}
 			}
 		})
+		if !d.value.IsValid() {
+			return nil, errors.New("singleton factory produced an invalid value")
+		}
 		return d.value.Interface(), nil
 	}
 
 	if d.factory != nil {
-		return d.factory(), nil
+		instance := d.factory()
+		if instance == nil {
+			return nil, errors.New("factory produced a nil value")
+		}
+		return instance, nil
 	}
-	return reflect.New(d.value.Type()).Elem().Interface(), nil
+
+	if d.value.IsValid() {
+		return reflect.New(d.value.Type()).Elem().Interface(), nil
+	}
+	return nil, errors.New("dependency is not valid")
 }
 
 var _ error = (*ErrDependencyNotFound)(nil)
