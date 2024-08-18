@@ -1,6 +1,7 @@
 package lists
 
 import (
+	"fmt"
 	"math/rand/v2"
 )
 
@@ -42,6 +43,86 @@ func Count[T any](slice []T, f Predicate[T]) int {
 		}
 	}
 	return count
+}
+
+// Counter represents a map with the count of each element.
+type Counter[T comparable] map[T]int
+
+func (c Counter[T]) String() string {
+	return fmt.Sprintf("%v", map[T]int(c))
+}
+
+// CountBy returns a map with the count of each element in the slice.
+func CountBy[T comparable](slice []T) Counter[T] {
+	counts := make(Counter[T], len(slice))
+	for _, item := range slice {
+		counts[item]++
+	}
+	return counts
+}
+
+// Get returns the count of the element in the counter.
+func (c Counter[T]) Get(key T) int {
+	return c[key]
+}
+
+// MostCommon returns the most common element(s) in the counter.
+func (c Counter[T]) MostCommon() []T {
+	result := []T{}
+	maximum := 0
+	for k, v := range c {
+		if v > maximum {
+			result = []T{k}
+			maximum = v
+			continue
+		}
+		if v == maximum {
+			result = append(result, k)
+		}
+	}
+	return result
+}
+
+// LeastCommon returns the least common element(s) in the counter.
+func (c Counter[T]) LeastCommon() []T {
+	result := []T{}
+	minimum := 0
+	for k, v := range c {
+		if minimum == 0 || v < minimum {
+			result = []T{k}
+			minimum = v
+			continue
+		}
+		if v == minimum {
+			result = append(result, k)
+		}
+	}
+	return result
+}
+
+// Elements returns a slice with the elements in the counter.
+func (c Counter[T]) Elements() []T {
+	result := []T{}
+	for k := range c {
+		result = append(result, k)
+	}
+	return result
+}
+
+// Total returns the total count of all elements in the counter.
+func (c Counter[T]) Total() int {
+	total := 0
+	for _, v := range c {
+		total += v
+	}
+	return total
+}
+
+// Clear removes all elements from the counter.
+func (c Counter[T]) Clear() {
+	for k := range c {
+		delete(c, k)
+	}
 }
 
 // Distinct returns a new slice containing only the unique elements of the original slice.

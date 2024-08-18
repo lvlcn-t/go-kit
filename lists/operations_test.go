@@ -1,7 +1,9 @@
 package lists
 
 import (
+	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -773,6 +775,290 @@ func TestNoneMatch(t *testing.T) { //nolint:dupl // generic functions cannot be 
 			got := NoneMatch(tt.slice, tt.f)
 			if got != tt.want {
 				t.Errorf("NoneMatch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCountBy(t *testing.T) {
+	tests := []struct {
+		name  string
+		slice []int
+		want  map[int]int
+	}{
+		{
+			name:  "success",
+			slice: []int{1, 2, 3, 4},
+			want: map[int]int{
+				1: 1,
+				2: 1,
+				3: 1,
+				4: 1,
+			},
+		},
+		{
+			name:  "empty slice",
+			slice: []int{},
+			want:  map[int]int{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CountBy(tt.slice)
+			if got == nil {
+				t.Errorf("CountBy() = nil, want %v", tt.want)
+			}
+
+			for k, v := range tt.want {
+				if got[k] != v {
+					t.Errorf("CountBy() = %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
+func TestCounter_Get(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Counter[int]
+		key  int
+		want int
+	}{
+		{
+			name: "success",
+			c: Counter[int]{
+				1: 2,
+				2: 3,
+			},
+			key:  2,
+			want: 3,
+		},
+		{
+			name: "not found",
+			c: Counter[int]{
+				1: 2,
+				2: 3,
+			},
+			key:  3,
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.c.Get(tt.key)
+			if got != tt.want {
+				t.Errorf("Counter.Get() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCounter_MostCommon(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Counter[int]
+		want []int
+	}{
+		{
+			name: "success",
+			c: Counter[int]{
+				1: 2,
+				2: 3,
+				3: 3,
+			},
+			want: []int{2, 3},
+		},
+		{
+			name: "tie",
+			c: Counter[int]{
+				1: 2,
+				2: 2,
+				3: 2,
+			},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "empty",
+			c:    Counter[int]{},
+			want: []int{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.c.MostCommon()
+			slices.Sort(got)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Counter.MostCommon() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCounter_LeastCommon(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Counter[int]
+		want []int
+	}{
+		{
+			name: "success",
+			c: Counter[int]{
+				1: 2,
+				2: 3,
+				3: 3,
+			},
+			want: []int{1},
+		},
+		{
+			name: "tie",
+			c: Counter[int]{
+				1: 2,
+				2: 2,
+				3: 2,
+			},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "empty",
+			c:    Counter[int]{},
+			want: []int{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.c.LeastCommon()
+			slices.Sort(got)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Counter.LeastCommon() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCounter_Elements(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Counter[int]
+		want []int
+	}{
+		{
+			name: "success",
+			c: Counter[int]{
+				1: 2,
+				2: 3,
+				3: 3,
+			},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "empty",
+			c:    Counter[int]{},
+			want: []int{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.c.Elements()
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Counter.Elements() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCounter_Total(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Counter[int]
+		want int
+	}{
+		{
+			name: "success",
+			c: Counter[int]{
+				1: 2,
+				2: 3,
+				3: 3,
+			},
+			want: 8,
+		},
+		{
+			name: "empty",
+			c:    Counter[int]{},
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.c.Total()
+			if got != tt.want {
+				t.Errorf("Counter.Total() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCounter_Clear(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Counter[int]
+		want Counter[int]
+	}{
+		{
+			name: "success",
+			c: Counter[int]{
+				1: 2,
+				2: 3,
+				3: 3,
+			},
+			want: Counter[int]{},
+		},
+		{
+			name: "empty",
+			c:    Counter[int]{},
+			want: Counter[int]{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.c.Clear()
+			if !reflect.DeepEqual(tt.c, tt.want) {
+				t.Errorf("Counter.Clear() = %v, want %v", tt.c, tt.want)
+			}
+		})
+	}
+}
+
+func TestCounter_String(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Counter[int]
+		want string
+	}{
+		{
+			name: "success",
+			c: Counter[int]{
+				1: 2,
+				2: 3,
+				3: 3,
+			},
+			want: fmt.Sprintf("%v", map[int]int{
+				1: 2,
+				2: 3,
+				3: 3,
+			}),
+		},
+		{
+			name: "empty",
+			c:    Counter[int]{},
+			want: fmt.Sprintf("%v", map[int]int{}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.c.String()
+			if got != tt.want {
+				t.Errorf("Counter.String() = %v, want %v", got, tt.want)
 			}
 		})
 	}
