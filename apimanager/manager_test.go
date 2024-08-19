@@ -270,6 +270,21 @@ func TestServer_Run(t *testing.T) {
 			wantErr:    true,
 			wantRoutes: 1 + defaultRoutes,
 		},
+		{
+			name:   "Run with global middlewares",
+			server: New(nil, middleware.Recover(), middleware.Logger()),
+			routes: []Route{
+				{
+					Methods: []string{http.MethodGet},
+					Path:    "/",
+					Handler: func(c fiber.Ctx) error {
+						return c.Status(http.StatusOK).SendString("Hello, World!")
+					},
+				},
+			},
+			wantErr:    false,
+			wantRoutes: 1 + defaultRoutes,
+		},
 	}
 
 	for _, tt := range tests {

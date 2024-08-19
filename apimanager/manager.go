@@ -279,6 +279,15 @@ func (s *server) attachRoutes(ctx context.Context) (err error) {
 	// To ensure all routes have access to the same logger a new logger instance is created and
 	// injected into the context if not already present.
 	_ = s.router.Use(middleware.Context(logger.IntoContext(ctx, logger.FromContext(ctx))))
+
+	// To be able to use the [fiber.Router]'s Use method, it's necessary to convert the middlewares to a slice of any.
+	// Unfortunately, the compiler does not allow implicit conversion from []fiber.Handler to []any.
+	middlewares := make([]any, len(s.middlewares))
+	for i := range s.middlewares {
+		middlewares[i] = s.middlewares[i]
+	}
+	_ = s.router.Use(middlewares...)
+
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("failed to mount routes: %v", r)
