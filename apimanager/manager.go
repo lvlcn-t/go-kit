@@ -328,7 +328,8 @@ func (s *server) Shutdown(ctx context.Context) error {
 // Restart restarts the server by shutting it down and starting it again.
 // If any routes or groups are provided, they will be added to the server.
 // All existing routes and groups will be preserved.
-// Runs indefinitely until an error occurs, the server shuts down, or the provided context is done.
+//
+// Note: The method returns immediately and the server restarts asynchronously.
 func (s *server) Restart(ctx context.Context, routes []Route, groups []RouteGroup) error {
 	s.mu.Lock()
 	if !s.running {
@@ -358,7 +359,12 @@ func (s *server) Restart(ctx context.Context, routes []Route, groups []RouteGrou
 		return err
 	}
 
-	return s.Run(ctx)
+	go func() {
+		if err := s.Run(ctx); err != nil {
+			logger.FromContext(ctx).ErrorContext(ctx, "Failed to run server after restart", "error", err)
+		}
+	}()
+	return nil
 }
 
 // App returns the fiber app of the server.
