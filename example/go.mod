@@ -1,6 +1,6 @@
 module github.com/lvlcn-t/go-kit/example
 
-go 1.22
+go 1.23
 
 require (
 	github.com/coreos/go-oidc/v3 v3.11.0
@@ -11,7 +11,7 @@ require (
 	github.com/lvlcn-t/go-kit/executors v0.3.0
 	github.com/lvlcn-t/go-kit/metrics v0.3.0
 	github.com/lvlcn-t/loggerhead v0.3.1
-	github.com/prometheus/client_golang v1.19.1
+	github.com/prometheus/client_golang v1.20.0
 	go.opentelemetry.io/otel v1.28.0
 	golang.org/x/oauth2 v0.22.0
 )
