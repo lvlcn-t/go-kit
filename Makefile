@@ -27,6 +27,16 @@ update: ### Updates all modules to the latest version
 		cd - > /dev/null; \
 	done
 
+.PHONY: example
+example: ### Runs the example for [MODULE]
+	@if [ -z "$(MODULE)" ]; then \
+		echo "No module found"; \
+		exit 1; \
+	fi
+	@cd example/$$(basename $(MODULE)); \
+	go run ./simple; \
+	cd - > /dev/null;
+
 .PHONY: tag
 tag: ### Tags the [MODULE] with [VERSION]
 	@if [ -z "$(VERSION)" || -z "$(MODULE)" ]; then \
