@@ -1,7 +1,9 @@
 package lists
 
 import (
+	"cmp"
 	"fmt"
+	"iter"
 	"math/rand/v2"
 )
 
@@ -244,6 +246,50 @@ func Zip[T any, R any](slice1 []T, slice2 []R) []Pair[T, R] {
 	return result
 }
 
+// Zipped holds values from an iteration of a Seq returned by [ZipIterator].
+type Zipped[T1, T2 any] struct {
+	V1  T1
+	OK1 bool
+
+	V2  T2
+	OK2 bool
+}
+
+// ZipIterator returns an iterator that combines the elements from two sequences into a single sequence of pairs.
+func ZipIterator[T1, T2 any](seq1 iter.Seq[T1], seq2 iter.Seq[T2]) iter.Seq[Zipped[T1, T2]] {
+	return func(yield func(Zipped[T1, T2]) bool) {
+		p1, stop := iter.Pull(seq1)
+		defer stop()
+		p2, stop := iter.Pull(seq2)
+		defer stop()
+
+		for {
+			var val Zipped[T1, T2]
+			val.V1, val.OK1 = p1()
+			val.V2, val.OK2 = p2()
+			if (!val.OK1 && !val.OK2) || !yield(val) {
+				return
+			}
+		}
+	}
+}
+
+func UnzipIterator[T1, T2 any](seq iter.Seq[Zipped[T1, T2]]) (seq1 iter.Seq[T1], seq2 iter.Seq[T2]) {
+	return func(yield func(T1) bool) {
+			for item := range seq {
+				if !yield(item.V1) {
+					return
+				}
+			}
+		}, func(yield func(T2) bool) {
+			for item := range seq {
+				if !yield(item.V2) {
+					return
+				}
+			}
+		}
+}
+
 // Unzip converts a slice of pairs into a pair of slices.
 func Unzip[T any, R any](pairs []Pair[T, R]) (p1 []T, p2 []R) {
 	slice1 := make([]T, 0, len(pairs))
@@ -377,4 +423,37 @@ func AnyMatch[T any](slice []T, f Predicate[T]) bool {
 // NoneMatch returns true if none of the elements of the slice satisfy the predicate f.
 func NoneMatch[T any](slice []T, f Predicate[T]) bool {
 	return !AnyMatch(slice, f)
+}
+
+// Sort returns a new slice with the elements of the original slice sorted in ascending order.
+// Its time complexities are O(n*log(n)) and O(n^2) in the worst case.
+// To make sure you don't hit the worst case, you should make sure that the last element of the slice is not the smallest nor the largest.
+func Sort[T cmp.Ordered](slice []T) []T {
+	// If the slice is empty or has only one element, it is already sorted.
+	if len(slice) <= 1 {
+		return slice
+	}
+
+	// Select a pivot element. In this case, we choose the last element.
+	pivot := slice[len(slice)-1]
+
+	// Allocate slices for the elements that are less than the pivot and the elements that are greater than the pivot.
+	left := make([]T, 0)
+	right := make([]T, 0)
+	for _, v := range slice[:len(slice)-1] {
+		// If the element is less than the pivot, add it to the left slice.
+		if v < pivot {
+			left = append(left, v)
+			continue
+		}
+		// If the element is greater than the pivot, add it to the right slice.
+		right = append(right, v)
+	}
+
+	// Recursively sort the left and right slices.
+	left = Sort(left)
+	right = Sort(right)
+
+	// Return the concatenation of the left slice, the pivot, and the right slice.
+	return append(append(left, pivot), right...)
 }
