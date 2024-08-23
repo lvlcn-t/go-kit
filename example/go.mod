@@ -11,7 +11,7 @@ require (
 	github.com/lvlcn-t/go-kit/executors v0.3.0
 	github.com/lvlcn-t/go-kit/metrics v0.3.0
 	github.com/lvlcn-t/loggerhead v0.3.1
-	github.com/prometheus/client_golang v1.20.0
+	github.com/prometheus/client_golang v1.20.1
 	go.opentelemetry.io/otel v1.28.0
 	golang.org/x/oauth2 v0.22.0
 )

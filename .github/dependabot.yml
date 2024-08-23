@@ -4,6 +4,7 @@ updates:
     directories:
       - "/apimanager"
       - "/config"
+      - "/dependency"
       - "/executors"
       - "/lists"
       - "/metrics"
