@@ -54,6 +54,8 @@ type Server interface {
 	App() *fiber.App
 	// Mounted returns all mounted routes, groups, and global middlewares.
 	Mounted() (routes []Route, groups []RouteGroup, middlewares []fiber.Handler)
+	// Config returns the configuration of the server.
+	Config() Config
 }
 
 // Route is a route to register to the server.
@@ -379,6 +381,13 @@ func (s *server) Mounted() (routes []Route, groups []RouteGroup, middlewares []f
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.routes, s.groups, s.middlewares
+}
+
+// Config returns the configuration of the server.
+func (s *server) Config() Config {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.config
 }
 
 // OkHandler is a handler that returns an HTTP 200 OK response.
