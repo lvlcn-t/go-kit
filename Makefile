@@ -9,7 +9,7 @@ help: ### Display this help
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Targets:"
-	@awk 'BEGIN {FS = ":.*?### "} /^[a-zA-Z_-]+:.*?### / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*?### "} /^[a-zA-Z_-]+:.*?### / {printf "  %-20s - %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: tidy
 tidy: ### Runs go mod tidy on all modules
