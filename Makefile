@@ -27,6 +27,10 @@ update: ### Updates all modules to the latest version
 		cd - > /dev/null; \
 	done
 
+.PHONY: lint
+lint: ### Runs linters on all modules
+	@pre-commit run -a
+
 .PHONY: example
 example: ### Runs the example for [MODULE]
 	@if [ -z "$(MODULE)" ]; then \
