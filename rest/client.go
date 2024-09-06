@@ -162,20 +162,16 @@ func NewClient(baseURL string, timeout ...time.Duration) (Client, error) {
 		t = timeout[0]
 	}
 
-	dt := http.DefaultTransport.(*http.Transport)
+	tp := http.DefaultTransport.(*http.Transport).Clone()
+	tp.MaxIdleConns = maxIdleConns
+	tp.MaxIdleConnsPerHost = maxIdleConnsPerHost
+	tp.IdleConnTimeout = idleConnTimeout
+
 	return &client{
 		baseURL: baseURL,
 		client: &http.Client{
-			Timeout: t,
-			Transport: &http.Transport{
-				Proxy:                 dt.Proxy,
-				DialContext:           dt.DialContext,
-				MaxIdleConns:          maxIdleConns,
-				MaxIdleConnsPerHost:   maxIdleConnsPerHost,
-				IdleConnTimeout:       idleConnTimeout,
-				TLSHandshakeTimeout:   dt.TLSHandshakeTimeout,
-				ExpectContinueTimeout: dt.ExpectContinueTimeout,
-			},
+			Timeout:   t,
+			Transport: tp,
 		},
 		limiter: rate.NewLimiter(maxRequestRate, maxRequestBurst),
 	}, nil
