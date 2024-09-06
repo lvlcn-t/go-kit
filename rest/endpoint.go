@@ -72,6 +72,10 @@ func (e *Endpoint) Compile(baseURL string) (string, error) {
 
 // combineQueries combines multiple queries into one.
 func combineQueries(queries ...url.Values) url.Values {
+	if len(queries) == 0 {
+		return nil
+	}
+
 	q := url.Values{}
 	for _, query := range queries {
 		for key, values := range query {
