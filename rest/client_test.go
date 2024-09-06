@@ -46,7 +46,7 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-func TestClient_Do(t *testing.T) {
+func TestClient_Do(t *testing.T) { //nolint:gocyclo // Either complexity or duplication
 	tests := []struct {
 		name        string
 		endpoint    *Endpoint
@@ -220,12 +220,12 @@ func TestClient_Do(t *testing.T) {
 			}
 
 			if !tt.invalidURL {
-				url, err := tt.endpoint.Compile(c.baseURL)
+				u, err := tt.endpoint.Compile(c.baseURL) //nolint:govet // Shadowing is okay
 				if err != nil && !tt.wantErr {
 					t.Fatalf("Failed to compile endpoint: %v", err)
 				}
 
-				httpmock.RegisterResponder(tt.endpoint.Method, url, func(req *http.Request) (*http.Response, error) {
+				httpmock.RegisterResponder(tt.endpoint.Method, u, func(req *http.Request) (*http.Response, error) {
 					if tt.wantHeaders != nil {
 						for key, value := range tt.wantHeaders {
 							if req.Header.Get(key) != value {
@@ -327,8 +327,8 @@ func TestClient_Close(t *testing.T) {
 					defer c.wg.Done()
 
 					time.Sleep(tt.reqDelay)
-					req, _ := http.NewRequest(http.MethodGet, "https://example.com/resource", http.NoBody)
-					_, _ = c.client.Do(req)
+					req, _ := http.NewRequest(http.MethodGet, "https://example.com/resource", http.NoBody) //nolint:noctx // No need for context in tests
+					_, _ = c.client.Do(req)                                                                //nolint:bodyclose // No need to close the response body in tests
 				}()
 			}
 

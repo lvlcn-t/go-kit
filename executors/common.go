@@ -82,7 +82,6 @@ func Concurrent(effectors ...Effector) Effector {
 		g, ctx := errgroup.WithContext(ctx)
 		errs := make(chan error, len(effectors))
 		for _, effector := range effectors {
-			effector := effector
 			g.Go(func() error {
 				err := effector(ctx)
 				errs <- err

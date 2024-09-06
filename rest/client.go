@@ -26,7 +26,7 @@ type Client interface {
 	// Do makes a request to the given [Endpoint], with the given payload and response objects. It applies the given options.
 	// Returns the status code of the response and an error if the request fails.
 	Do(ctx context.Context, endpoint *Endpoint, payload, response any, opts ...RequestOption) (int, error)
-	// Close closes the rest client and awaits all pending requests to finish. You can use a cancelling context to abort the waiting.
+	// Close closes the rest client and awaits all pending requests to finish. You can use a canceling context to abort the waiting.
 	Close(ctx context.Context)
 	// Client returns the [http.Client] the rest client uses.
 	Client() *http.Client
@@ -91,7 +91,7 @@ const (
 var (
 	// defaultRateLimiter is the default rate limiter for the rest client.
 	// It allows 10 requests per second with a burst of 10 (burst is the maximum number of requests that can be made in a single moment).
-	defaultRateLimiter = rate.NewLimiter(rate.Limit(10), 10)
+	defaultRateLimiter = rate.NewLimiter(rate.Limit(10), 10) //nolint:mnd // No need for another constant.
 	// ErrRateLimitExceeded is the error returned when the rate limit is exceeded.
 	ErrRateLimitExceeded = errors.New("rate limit exceeded")
 )
@@ -150,7 +150,7 @@ func (r *client) Do(ctx context.Context, endpoint *Endpoint, payload, response a
 		return 0, ErrRateLimitExceeded
 	}
 
-	body := (io.Reader)(http.NoBody)
+	body := io.Reader(http.NoBody)
 	if payload != nil {
 		data, err := json.Marshal(payload)
 		if err != nil {
@@ -203,8 +203,8 @@ func (r *client) Do(ctx context.Context, endpoint *Endpoint, payload, response a
 }
 
 // Close closes the rest client and awaits all pending requests to finish.
-// You can use a cancelling context to abort the waiting.
-// This also ensures that any ongoing connections are closed gracefully or forced if the context is cancelled.
+// You can use a canceling context to abort the waiting.
+// This also ensures that any ongoing connections are closed gracefully or forced if the context is canceled.
 func (r *client) Close(ctx context.Context) {
 	done := make(chan struct{})
 	go func() {

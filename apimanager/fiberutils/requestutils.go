@@ -120,7 +120,7 @@ func (b *Client) Port() Port {
 	if err != nil {
 		return Port(0)
 	}
-	return Port(v)
+	return Port(v) // #nosec G115 // The port is always a uint16 so the conversion is safe.
 }
 
 // IP represents an IP address.
