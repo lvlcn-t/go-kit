@@ -197,9 +197,9 @@ func TestClient_Do(t *testing.T) { //nolint:gocyclo // Either complexity or dupl
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 	c := &client{
-		baseURL:     "https://example.com",
-		client:      http.DefaultClient,
-		rateLimiter: defaultRateLimiter,
+		baseURL: "https://example.com",
+		client:  http.DefaultClient,
+		limiter: defaultRateLimiter,
 	}
 
 	for _, tt := range tests {
@@ -367,7 +367,7 @@ func TestClient_Client(t *testing.T) {
 
 func TestClient_RateLimiter(t *testing.T) {
 	c := &client{
-		rateLimiter: defaultRateLimiter,
+		limiter: defaultRateLimiter,
 	}
 
 	if c.RateLimiter() != defaultRateLimiter {

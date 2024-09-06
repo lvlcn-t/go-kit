@@ -25,47 +25,30 @@ var _ Client = (*client)(nil)
 type Client interface {
 	// Do makes a request to the given [Endpoint], with the given payload and response objects. It applies the given options.
 	// Returns the status code of the response and an error if the request fails.
+	//
+	// Example:
+	//	ctx := context.Background()
+	// 	client := rest.NewClient("https://api.example.com", 5*time.Second)
+	// 	defer client.Close(ctx)
+	//
+	// 	endpoint := rest.Get("/resource")
+	// 	payload := map[string]string{"key": "value"}
+	// 	var response map[string]any
+	// 	status, err := client.Do(ctx, endpoint, payload, &response)
+	//	if err != nil {
+	// 		// Handle error
+	// 	}
+	//
+	// The request will be made to "https://api.example.com/resource" with the payload marshaled to JSON
+	// and the response unmarshaled into the response object.
 	Do(ctx context.Context, endpoint *Endpoint, payload, response any, opts ...RequestOption) (int, error)
-	// Close closes the rest client and awaits all pending requests to finish. You can use a canceling context to abort the waiting.
+	// Close closes the rest client and gracefully awaits all pending requests to finish.
+	// If the context is canceled, it will close the idle connections immediately.
 	Close(ctx context.Context)
 	// Client returns the [http.Client] the rest client uses.
 	Client() *http.Client
 	// RateLimiter returns the [rate.Limiter] the rest client uses.
 	RateLimiter() *rate.Limiter
-}
-
-// Endpoint represents a REST endpoint.
-type Endpoint struct {
-	// Method is the HTTP method to use for the request.
-	Method string
-	// Path is the URL path to the endpoint.
-	Path string
-	// Query is the URL query parameters to use for the request.
-	Query url.Values
-}
-
-// Compile compiles the endpoint into a full URL.
-func (e *Endpoint) Compile(baseURL string) (string, error) {
-	base, err := url.Parse(baseURL)
-	if err != nil {
-		return "", err
-	}
-
-	// Create a relative URL for the endpoint path
-	path, err := url.Parse(e.Path)
-	if err != nil {
-		return "", err
-	}
-
-	// Resolve the base URL with the relative path. This will give us the full URL for the request.
-	// e.g. If baseURL is "http://example.com" and path is "/resource" the full URL will be "http://example.com/resource"
-	// If the path is "http://example.com/resource" it will be used as is
-	u := base.ResolveReference(path)
-	if e.Query != nil {
-		u.RawQuery = e.Query.Encode()
-	}
-
-	return u.String(), nil
 }
 
 // Request represents a request to be made by the rest client.
@@ -96,6 +79,25 @@ var (
 	ErrRateLimitExceeded = errors.New("rate limit exceeded")
 )
 
+// ErrDecodingResponse is the error returned when the response cannot be unmarshalled into the response object.
+type ErrDecodingResponse struct{ err error }
+
+// Error returns the error message.
+func (e *ErrDecodingResponse) Error() string {
+	return fmt.Sprintf("failed to decode response: %v", e.err)
+}
+
+// Is checks if the target error is an [ErrDecodingResponse].
+func (e *ErrDecodingResponse) Is(target error) bool {
+	_, ok := target.(*ErrDecodingResponse)
+	return ok
+}
+
+// Unwrap returns the wrapped error.
+func (e *ErrDecodingResponse) Unwrap() error {
+	return e.err
+}
+
 // client is the default implementation of the Client interface.
 // The client is used for making requests to different endpoints of one base URL.
 type client struct {
@@ -103,8 +105,8 @@ type client struct {
 	baseURL string
 	// client is the HTTP client used for requests.
 	client *http.Client
-	// rateLimiter is the rate limiter used for requests.
-	rateLimiter *rate.Limiter
+	// limiter is the rate limiter used for requests.
+	limiter *rate.Limiter
 	// wg is the wait group used to wait for all requests to finish.
 	wg sync.WaitGroup
 }
@@ -125,7 +127,7 @@ func NewClient(baseURL string, timeout time.Duration) (Client, error) {
 				IdleConnTimeout:     idleConnTimeout,
 			},
 		},
-		rateLimiter: defaultRateLimiter,
+		limiter: defaultRateLimiter,
 	}, nil
 }
 
@@ -136,17 +138,18 @@ func (r *client) Client() *http.Client {
 
 // RateLimiter returns the rate limiter the rest client uses.
 func (r *client) RateLimiter() *rate.Limiter {
-	return r.rateLimiter
+	return r.limiter
 }
 
 // Do makes a request to the given endpoint with the given payload and response objects.
 // It applies the given options and returns an error if the request fails.
+// If the response cannot be unmarshalled into the response object, it returns an [ErrDecodingResponse].
 func (r *client) Do(ctx context.Context, endpoint *Endpoint, payload, response any, opts ...RequestOption) (int, error) {
 	if ctx == nil || endpoint == nil {
 		return 0, errors.New("context and endpoint must not be nil")
 	}
 
-	if err := r.rateLimiter.Wait(ctx); err != nil {
+	if err := r.limiter.Wait(ctx); err != nil {
 		return 0, ErrRateLimitExceeded
 	}
 
@@ -154,19 +157,19 @@ func (r *client) Do(ctx context.Context, endpoint *Endpoint, payload, response a
 	if payload != nil {
 		data, err := json.Marshal(payload)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("failed to marshal payload: %w", err)
 		}
 		body = bytes.NewBuffer(data)
 	}
 
 	u, err := endpoint.Compile(r.baseURL)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to compile endpoint: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, endpoint.Method, u, body)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -187,7 +190,7 @@ func (r *client) Do(ctx context.Context, endpoint *Endpoint, payload, response a
 	defer r.wg.Done()
 	resp, err := r.client.Do(request.Request)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to make request: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, resp.Body.Close())
@@ -195,16 +198,15 @@ func (r *client) Do(ctx context.Context, endpoint *Endpoint, payload, response a
 
 	if response != nil {
 		if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
-			return resp.StatusCode, err
+			return resp.StatusCode, &ErrDecodingResponse{err: err}
 		}
 	}
 
 	return resp.StatusCode, nil
 }
 
-// Close closes the rest client and awaits all pending requests to finish.
-// You can use a canceling context to abort the waiting.
-// This also ensures that any ongoing connections are closed gracefully or forced if the context is canceled.
+// Close closes the rest client and gracefully awaits all pending requests to finish.
+// If the context is canceled, it will close the idle connections immediately.
 func (r *client) Close(ctx context.Context) {
 	done := make(chan struct{})
 	go func() {
@@ -212,15 +214,17 @@ func (r *client) Close(ctx context.Context) {
 		r.wg.Wait()
 	}()
 
+	type closer interface{ CloseIdleConnections() }
 	select {
 	case <-ctx.Done():
-		if transport, ok := r.client.Transport.(interface{ CloseIdleConnections() }); ok {
+		if transport, ok := r.client.Transport.(closer); ok {
 			transport.CloseIdleConnections()
 		}
 	case <-done:
 	}
 
-	if transport, ok := r.client.Transport.(interface{ CloseIdleConnections() }); ok {
+	// Ensure all idle connections are closed even if all requests should be done.
+	if transport, ok := r.client.Transport.(closer); ok {
 		transport.CloseIdleConnections()
 	}
 }
