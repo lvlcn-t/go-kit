@@ -8,4 +8,5 @@ use (
 	./executors
 	./lists
 	./metrics
+	./rest
 )

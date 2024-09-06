@@ -32,6 +32,7 @@ The repository is divided into several modules, each of which provides a differe
 - [executors](/executors/README.md): Useful executors and policies to handle common scenarios like retries with exponential backoff and more.
 - [lists](/lists/lists.go): A collection of functions to complement the [`slices`](https://pkg.go.dev/slices) package in the standard library.
 - [metrics](/metrics/README.md): A set of tools to collect and expose metrics for a Go application.
+- [rest](/rest/README.md): A generic REST client to make HTTP requests towards a (RESTful) API.
 
 ### Documentations
 
