@@ -12,11 +12,40 @@ import (
 	"time"
 
 	"github.com/jarcoal/httpmock"
+	"golang.org/x/time/rate"
 )
 
 type response struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
+}
+
+func TestDefaultClient_Do(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	DefaultClient.(*client).client = http.DefaultClient
+
+	httpmock.RegisterResponder(http.MethodGet, "https://example.com/resource", httpmock.NewJsonResponderOrPanic(200, map[string]any{"id": 1, "name": "Resource"}))
+
+	type response struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+
+	endpoint := Get("https://example.com/resource")
+
+	resp, status, err := Do[response](context.Background(), endpoint, nil)
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+
+	if status != http.StatusOK {
+		t.Errorf("Do() status = %v, want %v", status, http.StatusOK)
+	}
+
+	if resp.ID != 1 || resp.Name != "Resource" {
+		t.Errorf("Do() resp = %v, want %v", resp, response{ID: 1, Name: "Resource"})
+	}
 }
 
 func TestNewClient(t *testing.T) {
@@ -199,7 +228,7 @@ func TestClient_Do(t *testing.T) { //nolint:gocyclo // Either complexity or dupl
 	c := &client{
 		baseURL: "https://example.com",
 		client:  http.DefaultClient,
-		limiter: defaultRateLimiter,
+		limiter: rate.NewLimiter(maxRequestRate, maxRequestBurst),
 	}
 
 	for _, tt := range tests {
@@ -366,12 +395,13 @@ func TestClient_Client(t *testing.T) {
 }
 
 func TestClient_RateLimiter(t *testing.T) {
+	limiter := rate.NewLimiter(maxRequestRate, maxRequestBurst)
 	c := &client{
-		limiter: defaultRateLimiter,
+		limiter: limiter,
 	}
 
-	if c.RateLimiter() != defaultRateLimiter {
-		t.Errorf("RateLimiter() = %v, want %v", c.RateLimiter(), defaultRateLimiter)
+	if c.RateLimiter() != limiter {
+		t.Errorf("RateLimiter() = %v, want %v", c.RateLimiter(), limiter)
 	}
 }
 
