@@ -10,6 +10,7 @@ require (
 	github.com/lvlcn-t/go-kit/dependency v0.0.0-20240813221656-294916221526
 	github.com/lvlcn-t/go-kit/executors v0.3.0
 	github.com/lvlcn-t/go-kit/metrics v0.3.0
+	github.com/lvlcn-t/go-kit/rest v0.0.0-20240907124556-5002cf27c2a0
 	github.com/lvlcn-t/loggerhead v0.3.1
 	github.com/prometheus/client_golang v1.20.3
 	go.opentelemetry.io/otel v1.29.0
