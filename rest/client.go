@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"sync"
 	"time"
@@ -133,9 +134,7 @@ func (e *ErrDecodingResponse) Is(target error) bool {
 }
 
 // Unwrap returns the wrapped error.
-func (e *ErrDecodingResponse) Unwrap() error {
-	return e.err
-}
+func (e *ErrDecodingResponse) Unwrap() error { return e.err }
 
 // restClient is the default implementation of the Client interface.
 // It is used for making requests to different endpoints.
@@ -146,7 +145,7 @@ type restClient struct {
 	client *http.Client
 	// limiter is the rate limiter used for requests.
 	limiter *rate.Limiter
-	// wg is the wait group used to wait for all requests to finish.
+	// wg is the wait group used to track pending requests.
 	wg sync.WaitGroup
 }
 
@@ -293,6 +292,13 @@ func WithBearer(token string) RequestOption {
 func WithBasicAuth(username, password string) RequestOption {
 	return func(r *Request) {
 		r.Request.SetBasicAuth(username, password)
+	}
+}
+
+// WithTracer is a request option that sets a [httptrace.ClientTrace] for the request.
+func WithTracer(c *httptrace.ClientTrace) RequestOption {
+	return func(r *Request) {
+		r.Request = r.Request.WithContext(httptrace.WithClientTrace(r.Request.Context(), c))
 	}
 }
 

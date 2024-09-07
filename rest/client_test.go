@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -458,5 +460,27 @@ func TestWithBearer(t *testing.T) {
 
 	if request.Request.Header.Get("Authorization") != fmt.Sprintf("Bearer %s", token) {
 		t.Errorf("WithBearer() = %v, want %v", request.Request.Header.Get("Authorization"), fmt.Sprintf("Bearer %s", token))
+	}
+}
+
+func TestWithTracer(t *testing.T) {
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.com", http.NoBody)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	request := &Request{Request: req}
+	c := &httptrace.ClientTrace{
+		GetConn: func(hostPort string) {},
+	}
+	WithTracer(c)(request)
+
+	got := httptrace.ContextClientTrace(request.Request.Context())
+	if got == nil {
+		t.Fatalf("WithTracer() did not set ClientTrace in context")
+	}
+
+	if !reflect.DeepEqual(got, c) {
+		t.Errorf("WithTracer() = %v, want %v", got, c)
 	}
 }
