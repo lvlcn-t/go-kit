@@ -10,7 +10,7 @@ require (
 	github.com/lvlcn-t/go-kit/dependency v0.0.0-20240813221656-294916221526
 	github.com/lvlcn-t/go-kit/executors v0.3.0
 	github.com/lvlcn-t/go-kit/metrics v0.3.0
-	github.com/lvlcn-t/go-kit/rest v0.0.0-20240907124556-5002cf27c2a0
+	github.com/lvlcn-t/go-kit/rest v0.1.0
 	github.com/lvlcn-t/loggerhead v0.3.1
 	github.com/prometheus/client_golang v1.20.3
 	go.opentelemetry.io/otel v1.29.0
@@ -23,7 +23,9 @@ replace (
 	github.com/lvlcn-t/go-kit/config => ../config
 	github.com/lvlcn-t/go-kit/dependency => ../dependency
 	github.com/lvlcn-t/go-kit/executors => ../executors
-	github.com/lvlcn-t/metrics => ../metrics
+	github.com/lvlcn-t/go-kit/lists => ../lists
+	github.com/lvlcn-t/go-kit/metrics => ../metrics
+	github.com/lvlcn-t/go-kit/rest => ../rest
 )
 
 require (
