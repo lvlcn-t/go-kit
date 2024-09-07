@@ -8,6 +8,7 @@ updates:
       - "/executors"
       - "/lists"
       - "/metrics"
+      - "/rest"
     schedule:
       interval: "daily"
     labels:
