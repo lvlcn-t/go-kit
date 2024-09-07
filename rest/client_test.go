@@ -23,7 +23,7 @@ type response struct {
 func TestDefaultClient_Do(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
-	DefaultClient.(*client).client = http.DefaultClient
+	DefaultClient.(*restClient).client = http.DefaultClient
 
 	httpmock.RegisterResponder(http.MethodGet, "https://example.com/resource", httpmock.NewJsonResponderOrPanic(200, map[string]any{"id": 1, "name": "Resource"}))
 
@@ -225,7 +225,7 @@ func TestClient_Do(t *testing.T) { //nolint:gocyclo // Either complexity or dupl
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
-	c := &client{
+	c := &restClient{
 		baseURL: "https://example.com",
 		client:  http.DefaultClient,
 		limiter: rate.NewLimiter(maxRequestRate, maxRequestBurst),
@@ -341,7 +341,7 @@ func TestClient_Close(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &client{
+			c := &restClient{
 				client: &http.Client{
 					Transport: &mockTransport{},
 				},
@@ -385,7 +385,7 @@ func TestClient_Close(t *testing.T) {
 }
 
 func TestClient_Client(t *testing.T) {
-	c := &client{
+	c := &restClient{
 		client: http.DefaultClient,
 	}
 
@@ -396,7 +396,7 @@ func TestClient_Client(t *testing.T) {
 
 func TestClient_RateLimiter(t *testing.T) {
 	limiter := rate.NewLimiter(maxRequestRate, maxRequestBurst)
-	c := &client{
+	c := &restClient{
 		limiter: limiter,
 	}
 

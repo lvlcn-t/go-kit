@@ -16,12 +16,12 @@ import (
 )
 
 var (
-	_ Client = (*client)(nil)
+	_ Client = (*restClient)(nil)
 	// DefaultClient is the default rest client used for making requests.
 	DefaultClient Client = newDefaultClient()
 )
 
-// Do makes a request to the given endpoint with the given payload and response objects.
+// Do makes a request to the given endpoint with the given payload and response type.
 // It applies the given options and returns an error if the request fails.
 //
 // Example:
@@ -137,9 +137,9 @@ func (e *ErrDecodingResponse) Unwrap() error {
 	return e.err
 }
 
-// client is the default implementation of the Client interface.
-// The client is used for making requests to different endpoints.
-type client struct {
+// restClient is the default implementation of the Client interface.
+// It is used for making requests to different endpoints.
+type restClient struct {
 	// baseURL is the base URL for all requests.
 	baseURL string
 	// client is the HTTP client used for requests.
@@ -167,7 +167,7 @@ func NewClient(baseURL string, timeout ...time.Duration) (Client, error) {
 	tp.MaxIdleConnsPerHost = maxIdleConnsPerHost
 	tp.IdleConnTimeout = idleConnTimeout
 
-	return &client{
+	return &restClient{
 		baseURL: baseURL,
 		client: &http.Client{
 			Timeout:   t,
@@ -178,19 +178,19 @@ func NewClient(baseURL string, timeout ...time.Duration) (Client, error) {
 }
 
 // Client returns the HTTP client the rest client uses.
-func (r *client) Client() *http.Client {
+func (r *restClient) Client() *http.Client {
 	return r.client
 }
 
 // RateLimiter returns the rate limiter the rest client uses.
-func (r *client) RateLimiter() *rate.Limiter {
+func (r *restClient) RateLimiter() *rate.Limiter {
 	return r.limiter
 }
 
 // Do makes a request to the given endpoint with the given payload and response objects.
 // It applies the given options and returns an error if the request fails.
 // If the response cannot be unmarshalled into the response object, it returns an [ErrDecodingResponse].
-func (r *client) Do(ctx context.Context, endpoint *Endpoint, payload, response any, opts ...RequestOption) (int, error) {
+func (r *restClient) Do(ctx context.Context, endpoint *Endpoint, payload, response any, opts ...RequestOption) (int, error) {
 	if ctx == nil || endpoint == nil {
 		return 0, errors.New("context and endpoint must not be nil")
 	}
@@ -253,7 +253,7 @@ func (r *client) Do(ctx context.Context, endpoint *Endpoint, payload, response a
 
 // Close closes the rest client and gracefully awaits all pending requests to finish.
 // If the context is canceled, it will close the idle connections immediately.
-func (r *client) Close(ctx context.Context) {
+func (r *restClient) Close(ctx context.Context) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
