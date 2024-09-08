@@ -251,8 +251,8 @@ func TestClient_Do(t *testing.T) { //nolint:gocyclo // Either complexity or dupl
 			}
 
 			if !tt.invalidURL {
-				u, err := tt.endpoint.Compile(c.baseURL) //nolint:govet // Shadowing is okay
-				if err != nil && !tt.wantErr {
+				u, e := tt.endpoint.Compile(c.baseURL)
+				if e != nil && !tt.wantErr {
 					t.Fatalf("Failed to compile endpoint: %v", err)
 				}
 
@@ -296,7 +296,7 @@ func newQuery(key, value string) url.Values {
 }
 
 type mockTransport struct {
-	httpmock.MockTransport
+	*httpmock.MockTransport
 	numClosed int
 }
 
@@ -338,28 +338,37 @@ func TestClient_Close(t *testing.T) {
 			wantTimeout: true,
 		},
 	}
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &restClient{
-				client: &http.Client{
-					Transport: &mockTransport{},
-				},
-				wg: sync.WaitGroup{},
+				client: http.DefaultClient,
+				wg:     sync.WaitGroup{},
 			}
 
+			httpmock.ActivateNonDefault(c.client)
 			httpmock.RegisterResponder(http.MethodGet, "https://example.com/resource", httpmock.NewJsonResponderOrPanic(200, map[string]any{"id": 1, "name": "Resource"}))
+			c.client.Transport = &mockTransport{MockTransport: http.DefaultClient.Transport.(*httpmock.MockTransport)}
 
+			var wg sync.WaitGroup
 			for range tt.numRequests {
+				wg.Add(1)
 				c.wg.Add(1)
 				go func() {
+					defer wg.Done()
 					defer c.wg.Done()
 
-					time.Sleep(tt.reqDelay)
-					req, _ := http.NewRequest(http.MethodGet, "https://example.com/resource", http.NoBody) //nolint:noctx // No need for context in tests
-					_, _ = c.client.Do(req)                                                                //nolint:bodyclose // No need to close the response body in tests
+					<-time.After(tt.reqDelay)
+					req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://example.com/resource", http.NoBody)
+					if err != nil {
+						t.Errorf("Failed to create request: %v", err)
+					}
+
+					resp, err := c.client.Do(req)
+					if err != nil {
+						t.Errorf("Failed to make request: %v", err)
+					}
+					defer resp.Body.Close()
 				}()
 			}
 
@@ -372,6 +381,8 @@ func TestClient_Close(t *testing.T) {
 			start := time.Now()
 			c.Close(ctx)
 			elapsed := time.Since(start)
+
+			wg.Wait()
 
 			if !tt.wantTimeout && elapsed < tt.reqDelay {
 				t.Errorf("Close() returned too early, expected it to wait for pending requests")
