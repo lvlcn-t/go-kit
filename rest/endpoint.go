@@ -40,8 +40,10 @@ func Delete(path string, queries ...url.Values) *Endpoint {
 	return &Endpoint{Method: http.MethodDelete, Path: path, Query: combineQueries(queries...)}
 }
 
-// Query adds the given query parameters to the endpoint.
-func (e *Endpoint) AddQuery(query url.Values) *Endpoint {
+// Query adds the given key and value to the endpoint query.
+func (e *Endpoint) AddQuery(key, value string) *Endpoint {
+	query := url.Values{}
+	query.Add(key, value)
 	e.Query = combineQueries(e.Query, query)
 	return e
 }

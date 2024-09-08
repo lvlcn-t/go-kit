@@ -44,7 +44,7 @@ func TestEndpoint_Compile(t *testing.T) {
 		},
 		{
 			name:    "valid path with query",
-			e:       Delete("/path").AddQuery(url.Values{"key": {"value"}}),
+			e:       Delete("/path").AddQuery("key", "value"),
 			baseURL: "http://localhost",
 			want:    "http://localhost/path?key=value",
 			wantErr: false,

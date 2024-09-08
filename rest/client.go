@@ -16,11 +16,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
-var (
-	_ Client = (*restClient)(nil)
-	// DefaultClient is the default rest client used for making requests.
-	DefaultClient Client = newDefaultClient()
-)
+// DefaultClient is the default rest client used for making requests.
+var DefaultClient = newDefaultClient()
 
 // Do makes a request to the given endpoint with the given payload and response type.
 // It applies the given options and returns an error if the request fails.
@@ -101,6 +98,8 @@ type Request struct {
 // RequestOption is a function that modifies a request.
 type RequestOption func(*Request)
 
+var _ Client = (*restClient)(nil)
+
 const (
 	// maxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts.
 	maxIdleConns = 100
@@ -115,26 +114,6 @@ const (
 	// maxRequestBurst is the maximum number of requests that can be made in a single moment.
 	maxRequestBurst = 10
 )
-
-// ErrRateLimitExceeded is the error returned when the rate limit is exceeded.
-var ErrRateLimitExceeded = errors.New("rate limit exceeded")
-
-// ErrDecodingResponse is the error returned when the response cannot be unmarshalled into the response object.
-type ErrDecodingResponse struct{ err error }
-
-// Error returns the error message.
-func (e *ErrDecodingResponse) Error() string {
-	return fmt.Sprintf("failed to decode response: %v", e.err)
-}
-
-// Is checks if the target error is an [ErrDecodingResponse].
-func (e *ErrDecodingResponse) Is(target error) bool {
-	_, ok := target.(*ErrDecodingResponse)
-	return ok
-}
-
-// Unwrap returns the wrapped error.
-func (e *ErrDecodingResponse) Unwrap() error { return e.err }
 
 // restClient is the default implementation of the Client interface.
 // It is used for making requests to different endpoints.
@@ -190,10 +169,19 @@ func (r *restClient) RateLimiter() *rate.Limiter {
 // It applies the given options and returns an error if the request fails.
 // If the response cannot be unmarshalled into the response object, it returns an [ErrDecodingResponse].
 func (r *restClient) Do(ctx context.Context, endpoint *Endpoint, payload, response any, opts ...RequestOption) (int, error) {
-	if ctx == nil || endpoint == nil {
-		return 0, errors.New("context and endpoint must not be nil")
+	if endpoint == nil {
+		return 0, errors.New("endpoint is nil")
 	}
 
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	return r.do(ctx, endpoint, payload, response, opts)
+}
+
+// do is the implementation of the [Client].Do method that makes the request to the given endpoint.
+func (r *restClient) do(ctx context.Context, endpoint *Endpoint, payload, response any, opts []RequestOption) (int, error) {
 	if err := r.limiter.Wait(ctx); err != nil {
 		return 0, ErrRateLimitExceeded
 	}
@@ -268,6 +256,26 @@ func (r *restClient) Close(ctx context.Context) {
 	// Ensure all idle connections are closed even if all requests should be done.
 	r.client.CloseIdleConnections()
 }
+
+// ErrRateLimitExceeded is the error returned when the rate limit is exceeded.
+var ErrRateLimitExceeded = errors.New("rate limit exceeded")
+
+// ErrDecodingResponse is the error returned when the response cannot be unmarshalled into the response object.
+type ErrDecodingResponse struct{ err error }
+
+// Error returns the error message.
+func (e *ErrDecodingResponse) Error() string {
+	return fmt.Sprintf("failed to decode response: %v", e.err)
+}
+
+// Is checks if the target error is an [ErrDecodingResponse].
+func (e *ErrDecodingResponse) Is(target error) bool {
+	_, ok := target.(*ErrDecodingResponse)
+	return ok
+}
+
+// Unwrap returns the wrapped error.
+func (e *ErrDecodingResponse) Unwrap() error { return e.err }
 
 // WithDelay is a request option that adds a delay before executing the request
 func WithDelay(d time.Duration) RequestOption {
