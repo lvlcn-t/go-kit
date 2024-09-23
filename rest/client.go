@@ -105,7 +105,7 @@ var _ Client = (*restClient)(nil)
 
 const (
 	// DefaultTimeout is the default timeout for requests.
-	DefaultTimeout = 60 * time.Second
+	DefaultTimeout = 90 * time.Second
 	// maxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts.
 	maxIdleConns = 100
 	// maxIdleConnsPerHost controls the maximum number of idle (keep-alive) connections to keep per-host.

@@ -13,6 +13,7 @@ help: ### Display this help
 
 .PHONY: tidy
 tidy: ### Runs go mod tidy on all modules
+	@go work sync
 	@for module in $(MODULES); do \
 		cd $$module; \
 		go mod tidy; \
