@@ -96,6 +96,9 @@ type Request struct {
 	Request *http.Request
 	// Delay is the amount of time to wait before executing the request.
 	Delay time.Duration
+	// ResponseHandler is the handler to be called when the response is received.
+	// If not set, it will decode the response body into the provided response object.
+	ResponseHandler func(*http.Response) error
 }
 
 // RequestOption is a function that modifies a request.
@@ -210,7 +213,7 @@ func (r *restClient) do(ctx context.Context, endpoint *Endpoint, payload, respon
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	request := &Request{Request: req, Delay: 0}
+	request := &Request{Request: req, Delay: 0, ResponseHandler: handleResponse(response)} //nolint:bodyclose // False positive
 	for _, opt := range opts {
 		opt(request)
 	}
@@ -233,13 +236,7 @@ func (r *restClient) do(ctx context.Context, endpoint *Endpoint, payload, respon
 		err = errors.Join(err, resp.Body.Close())
 	}()
 
-	if response != nil {
-		if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
-			return resp.StatusCode, &ErrDecodingResponse{err: err}
-		}
-	}
-
-	return resp.StatusCode, nil
+	return resp.StatusCode, request.ResponseHandler(resp)
 }
 
 // Close closes the rest client and gracefully awaits all pending requests to finish.
@@ -314,6 +311,13 @@ func WithTracer(c *httptrace.ClientTrace) RequestOption {
 	}
 }
 
+// WithResponseHandler is a request option that sets a custom response handler for the request.
+func WithResponseHandler(handler func(*http.Response) error) RequestOption {
+	return func(r *Request) {
+		r.ResponseHandler = handler
+	}
+}
+
 // defaultClient creates a new [restClient] without a base URL.
 // Panics if the client cannot be created.
 func defaultClient() Client {
@@ -331,4 +335,18 @@ func defaultTransport() *http.Transport {
 	tp.MaxIdleConnsPerHost = maxIdleConnsPerHost
 	tp.IdleConnTimeout = idleConnTimeout
 	return tp
+}
+
+// handleResponse returns a function that decodes the response body into the given response object.
+func handleResponse(response any) func(*http.Response) error {
+	return func(resp *http.Response) error {
+		if response == nil {
+			return nil
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
+			return &ErrDecodingResponse{err: err}
+		}
+		return nil
+	}
 }

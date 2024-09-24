@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptrace"
@@ -118,6 +119,38 @@ func TestClient_Do(t *testing.T) { //nolint:gocyclo // Either complexity or dupl
 				Name: "New Resource",
 			},
 			wantCode: http.StatusCreated,
+			wantErr:  false,
+		},
+		{
+			name: "POST method with error response",
+			endpoint: &Endpoint{
+				Method: http.MethodPost,
+				Path:   "/resource",
+			},
+			payload: map[string]string{
+				"name": "New Resource",
+			},
+			options: []RequestOption{
+				WithResponseHandler(func(r *http.Response) error {
+					if r.StatusCode != http.StatusConflict {
+						return errors.New("unexpected status code")
+					}
+
+					var er struct {
+						Error string `json:"error"`
+					}
+					if err := json.NewDecoder(r.Body).Decode(&er); err != nil {
+						return err
+					}
+
+					if er.Error == "" {
+						return errors.New("error field not found in response")
+					}
+					return nil
+				}),
+			},
+			want:     map[string]string{"error": "Resource already exists"},
+			wantCode: http.StatusConflict,
 			wantErr:  false,
 		},
 		{
@@ -282,7 +315,8 @@ func TestClient_Do(t *testing.T) { //nolint:gocyclo // Either complexity or dupl
 				t.Errorf("Client.Do() code = %v, want %v", code, tt.wantCode)
 			}
 
-			if !tt.wantErr && got != tt.want {
+			_, isResponse := tt.want.(response)
+			if !tt.wantErr && isResponse && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Client.Do() got = %v, want %v", got, tt.want)
 			}
 		})
