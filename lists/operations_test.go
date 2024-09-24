@@ -960,6 +960,7 @@ func TestCounter_Elements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.c.Elements()
+			slices.Sort(got)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Counter.Elements() = %v, want %v", got, tt.want)
 			}
