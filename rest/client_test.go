@@ -154,6 +154,38 @@ func TestClient_Do(t *testing.T) { //nolint:gocyclo // Either complexity or dupl
 			wantErr:  false,
 		},
 		{
+			name: "PUT method with error response and custom error handler",
+			endpoint: &Endpoint{
+				Method: http.MethodPut,
+				Path:   "/resource",
+			},
+			payload: map[string]string{
+				"name": "Updated Resource",
+			},
+			options: []RequestOption{
+				WithErrorHandler(func(resp *http.Response) error {
+					if resp.StatusCode < http.StatusBadRequest {
+						return errors.New("unexpected status code")
+					}
+
+					var er struct {
+						Error string `json:"error"`
+					}
+					if err := json.NewDecoder(resp.Body).Decode(&er); err != nil {
+						return err
+					}
+
+					if er.Error == "" {
+						return errors.New("error field not found in response")
+					}
+					return nil
+				}, nil),
+			},
+			want:     map[string]string{"error": "Resource not found"},
+			wantCode: http.StatusNotFound,
+			wantErr:  false,
+		},
+		{
 			name: "failure case with 404 error",
 			endpoint: &Endpoint{
 				Method: http.MethodGet,

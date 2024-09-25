@@ -90,6 +90,9 @@ type Client interface {
 	RateLimiter() *rate.Limiter
 }
 
+// ResponseHandler is a function that handles the response of a request.
+type ResponseHandler func(*http.Response) error
+
 // Request represents a request to be made by the rest client.
 type Request struct {
 	// Request is the HTTP request to be made.
@@ -98,7 +101,7 @@ type Request struct {
 	Delay time.Duration
 	// ResponseHandler is the handler to be called when the response is received.
 	// If not set, it will decode the response body into the provided response object.
-	ResponseHandler func(*http.Response) error
+	ResponseHandler ResponseHandler
 }
 
 // RequestOption is a function that modifies a request.
@@ -108,7 +111,7 @@ var _ Client = (*restClient)(nil)
 
 const (
 	// DefaultTimeout is the default timeout for requests.
-	DefaultTimeout = 90 * time.Second
+	DefaultTimeout = 30 * time.Second
 	// maxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts.
 	maxIdleConns = 100
 	// maxIdleConnsPerHost controls the maximum number of idle (keep-alive) connections to keep per-host.
@@ -213,7 +216,7 @@ func (r *restClient) do(ctx context.Context, endpoint *Endpoint, payload, respon
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	request := &Request{Request: req, Delay: 0, ResponseHandler: handleResponse(response)} //nolint:bodyclose // False positive
+	request := &Request{Request: req, Delay: 0, ResponseHandler: handleResponse(response)}
 	for _, opt := range opts {
 		opt(request)
 	}
@@ -250,10 +253,8 @@ func (r *restClient) Close(ctx context.Context) {
 
 	select {
 	case <-ctx.Done():
-		r.client.CloseIdleConnections()
 	case <-done:
 	}
-
 	// Ensure all idle connections are closed even if all requests should be done.
 	r.client.CloseIdleConnections()
 }
@@ -262,11 +263,11 @@ func (r *restClient) Close(ctx context.Context) {
 var ErrRateLimitExceeded = errors.New("rate limit exceeded")
 
 // ErrDecodingResponse is the error returned when the response cannot be unmarshalled into the response object.
-type ErrDecodingResponse struct{ err error }
+type ErrDecodingResponse struct{ Err error }
 
 // Error returns the error message.
 func (e *ErrDecodingResponse) Error() string {
-	return fmt.Sprintf("failed to decode response: %v", e.err)
+	return fmt.Sprintf("failed to decode response: %v", e.Err)
 }
 
 // Is checks if the target error is an [ErrDecodingResponse].
@@ -276,7 +277,7 @@ func (e *ErrDecodingResponse) Is(target error) bool {
 }
 
 // Unwrap returns the wrapped error.
-func (e *ErrDecodingResponse) Unwrap() error { return e.err }
+func (e *ErrDecodingResponse) Unwrap() error { return e.Err }
 
 // WithDelay is a request option that adds a delay before executing the request
 func WithDelay(d time.Duration) RequestOption {
@@ -312,9 +313,27 @@ func WithTracer(c *httptrace.ClientTrace) RequestOption {
 }
 
 // WithResponseHandler is a request option that sets a custom response handler for the request.
-func WithResponseHandler(handler func(*http.Response) error) RequestOption {
+func WithResponseHandler(handler ResponseHandler) RequestOption {
 	return func(r *Request) {
 		r.ResponseHandler = handler
+	}
+}
+
+// WithErrorHandler is a request option that sets a custom error handler for the request.
+// A request is considered successful if the status code is less than [http.StatusBadRequest].
+// If no success handler is provided, it will use the default response handler.
+func WithErrorHandler(errorHandler, successHandler ResponseHandler) RequestOption {
+	return func(r *Request) {
+		if successHandler == nil {
+			successHandler = r.ResponseHandler
+		}
+
+		r.ResponseHandler = func(resp *http.Response) error {
+			if resp.StatusCode >= http.StatusBadRequest && errorHandler != nil {
+				return errorHandler(resp)
+			}
+			return successHandler(resp)
+		}
 	}
 }
 
@@ -323,7 +342,7 @@ func WithResponseHandler(handler func(*http.Response) error) RequestOption {
 func defaultClient() Client {
 	c, err := New("")
 	if err != nil {
-		panic(fmt.Sprintf("failed to create default client: %v", err))
+		panic(fmt.Errorf("failed to create default client: %w", err))
 	}
 	return c
 }
@@ -338,14 +357,14 @@ func defaultTransport() *http.Transport {
 }
 
 // handleResponse returns a function that decodes the response body into the given response object.
-func handleResponse(response any) func(*http.Response) error {
+func handleResponse(response any) ResponseHandler {
 	return func(resp *http.Response) error {
-		if response == nil {
+		if response == nil || resp.StatusCode >= http.StatusBadRequest {
 			return nil
 		}
 
 		if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
-			return &ErrDecodingResponse{err: err}
+			return &ErrDecodingResponse{Err: err}
 		}
 		return nil
 	}
