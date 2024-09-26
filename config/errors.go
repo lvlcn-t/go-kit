@@ -96,6 +96,12 @@ func (e ErrConfigEmpty) Error() string {
 	return "you must provide a configuration"
 }
 
+// Is returns true if the target error is an [ErrConfigEmpty].
+func (e *ErrConfigEmpty) Is(target error) bool {
+	_, ok := target.(*ErrConfigEmpty)
+	return ok
+}
+
 // parserError is an error type that indicates a parsing error with the validation rule.
 type parserError struct {
 	rule  Rule
