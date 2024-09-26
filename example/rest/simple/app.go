@@ -50,7 +50,7 @@ func main() {
 	time.Sleep(time.Second)
 
 	// Make an API call to the server
-	makeAPICall(ctx)
+	callAPI(ctx)
 
 	// Shutdown the server
 	err = srv.Shutdown(ctx)
@@ -59,8 +59,8 @@ func main() {
 	}
 }
 
-// makeAPICall makes an API call to the server
-func makeAPICall(ctx context.Context) {
+// callAPI makes an API call to the server
+func callAPI(ctx context.Context) {
 	// Create a new REST endpoint
 	endpoint := rest.Get("http://localhost:8080")
 
