@@ -45,9 +45,9 @@ var DefaultTransport = defaultTransport()
 //
 // The request will be made to "https://api.example.com/resource" with the payload marshaled to JSON
 // and the response unmarshaled into a response object with the given type.
-func Do[T any](ctx context.Context, endpoint *Endpoint, payload any, opts ...RequestOption) (resp T, code int, err error) {
-	code, err = DefaultClient.Do(ctx, endpoint, payload, &resp, opts...)
-	return resp, code, err
+func Do[T any](ctx context.Context, endpoint *Endpoint, payload any, opts ...RequestOption) (resp T, status int, err error) {
+	status, err = DefaultClient.Do(ctx, endpoint, payload, &resp, opts...)
+	return resp, status, err
 }
 
 // Close closes the default rest client and gracefully awaits all pending requests to finish.

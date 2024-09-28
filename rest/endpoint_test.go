@@ -51,16 +51,9 @@ func TestEndpoint_Compile(t *testing.T) {
 		},
 		{
 			name:    "valid path with multiple queries",
-			e:       Get("/path", url.Values{"key": {"value"}}, url.Values{"key2": {"value2"}}),
+			e:       Get("/path").AddQuery("key", "value").AddQuery("key2", "value2"),
 			baseURL: "http://localhost",
 			want:    "http://localhost/path?key=value&key2=value2",
-			wantErr: false,
-		},
-		{
-			name:    "valid path with invalid query",
-			e:       Post("/path", url.Values{"key": {"value"}}, url.Values{"key2": {}}),
-			baseURL: "http://localhost",
-			want:    "http://localhost/path?key=value",
 			wantErr: false,
 		},
 		{
@@ -117,7 +110,7 @@ func TestEndpoint_Compile(t *testing.T) {
 func TestNewEndpoint(t *testing.T) {
 	tests := []struct {
 		name    string
-		fun     func(path string, queries ...url.Values) *Endpoint
+		fun     func(path string) *Endpoint
 		path    string
 		queries []url.Values
 		want    *Endpoint
@@ -161,7 +154,17 @@ func TestNewEndpoint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.fun(tt.path, tt.queries...)
+			got := tt.fun(tt.path)
+			if tt.queries != nil {
+				for _, query := range tt.queries {
+					for key, values := range query {
+						for _, value := range values {
+							got.AddQuery(key, value)
+						}
+					}
+				}
+			}
+
 			if got.Method != tt.want.Method {
 				t.Errorf("Get() Method = %v, want %v", got.Method, tt.want.Method)
 			}

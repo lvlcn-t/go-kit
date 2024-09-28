@@ -15,36 +15,38 @@ type Endpoint struct {
 	Query url.Values
 }
 
-// Get creates a new [Endpoint] with the [http.MethodGet] method and the given path and queries.
-func Get(path string, queries ...url.Values) *Endpoint {
-	return &Endpoint{Method: http.MethodGet, Path: path, Query: combineQueries(queries...)}
+// Get creates a new [Endpoint] with the [http.MethodGet] method and the given path.
+func Get(path string) *Endpoint {
+	return &Endpoint{Method: http.MethodGet, Path: path}
 }
 
-// Post creates a new [Endpoint] with the [http.MethodPost] method and the given path and queries.
-func Post(path string, queries ...url.Values) *Endpoint {
-	return &Endpoint{Method: http.MethodPost, Path: path, Query: combineQueries(queries...)}
+// Post creates a new [Endpoint] with the [http.MethodPost] method and the given path.
+func Post(path string) *Endpoint {
+	return &Endpoint{Method: http.MethodPost, Path: path}
 }
 
-// Put creates a new [Endpoint] with the [http.MethodPut] method and the given path and queries.
-func Put(path string, queries ...url.Values) *Endpoint {
-	return &Endpoint{Method: http.MethodPut, Path: path, Query: combineQueries(queries...)}
+// Put creates a new [Endpoint] with the [http.MethodPut] method and the given path.
+func Put(path string) *Endpoint {
+	return &Endpoint{Method: http.MethodPut, Path: path}
 }
 
-// Patch creates a new [Endpoint] with the [http.MethodPatch] method and the given path and queries.
-func Patch(path string, queries ...url.Values) *Endpoint {
-	return &Endpoint{Method: http.MethodPatch, Path: path, Query: combineQueries(queries...)}
+// Patch creates a new [Endpoint] with the [http.MethodPatch] method and the given path.
+func Patch(path string) *Endpoint {
+	return &Endpoint{Method: http.MethodPatch, Path: path}
 }
 
-// Delete creates a new [Endpoint] with the [http.MethodDelete] method and the given path and queries.
-func Delete(path string, queries ...url.Values) *Endpoint {
-	return &Endpoint{Method: http.MethodDelete, Path: path, Query: combineQueries(queries...)}
+// Delete creates a new [Endpoint] with the [http.MethodDelete] method and the given path.
+func Delete(path string) *Endpoint {
+	return &Endpoint{Method: http.MethodDelete, Path: path}
 }
 
-// Query adds the given key and value to the endpoint query.
+// AddQuery adds a query parameter value to a key.
+// It appends to any existing values associated with key.
 func (e *Endpoint) AddQuery(key, value string) *Endpoint {
-	query := url.Values{}
-	query.Add(key, value)
-	e.Query = combineQueries(e.Query, query)
+	if e.Query == nil {
+		e.Query = url.Values{}
+	}
+	e.Query.Add(key, value)
 	return e
 }
 
@@ -70,19 +72,4 @@ func (e *Endpoint) Compile(baseURL string) (string, error) {
 	}
 
 	return u.String(), nil
-}
-
-// combineQueries combines multiple queries into one.
-func combineQueries(queries ...url.Values) url.Values {
-	if len(queries) == 0 {
-		return nil
-	}
-
-	q := url.Values{}
-	for _, query := range queries {
-		for key, values := range query {
-			q[key] = values
-		}
-	}
-	return q
 }
