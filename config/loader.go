@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
@@ -22,6 +23,8 @@ var (
 	fsys afero.Fs = afero.NewOsFs()
 	// appName is the name of the application (default: binary name)
 	appName string = filepath.Base(os.Args[0])
+	// mu to protect concurrent access to global variables
+	mu sync.Mutex
 )
 
 // Loadable is an interface that must be implemented by a configuration struct to be loaded.
@@ -89,7 +92,7 @@ func Load[T Loadable](path string, fallbacks ...Fallback) (cfg T, err error) {
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(*fs.PathError); !ok {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return cfg, fmt.Errorf("failed to read configuration file: %w", err)
 		}
 	}
@@ -106,15 +109,19 @@ func Load[T Loadable](path string, fallbacks ...Fallback) (cfg T, err error) {
 }
 
 // SetName replaces the default application name with the provided one.
-// This function is not safe for concurrent use.
+// This function is safe for concurrent use.
 func SetName(name string) {
+	mu.Lock()
+	defer mu.Unlock()
 	appName = name
 }
 
 // SetFs replaces the default filesystem with the provided one.
 // This may only be used for testing purposes.
-// This function is not safe for concurrent use.
+// This function is safe for concurrent use.
 func SetFs(filesystem afero.Fs) {
+	mu.Lock()
+	defer mu.Unlock()
 	fsys = filesystem
 }
 

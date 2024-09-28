@@ -152,6 +152,60 @@ func TestLoad_Pointer(t *testing.T) {
 	}
 }
 
+func TestSetName(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		want string
+	}{
+		{
+			name: "success",
+			want: "test",
+		},
+		{
+			name: "empty",
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SetName(tt.want)
+			if appName != tt.want {
+				t.Errorf("SetName() = %v, want %v", appName, tt.want)
+			}
+		})
+	}
+}
+
+func TestSetFs(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		want afero.Fs
+	}{
+		{
+			name: "success",
+			want: afero.NewMemMapFs(),
+		},
+		{
+			name: "nil",
+			want: nil,
+		},
+		{
+			name: "default",
+			want: afero.NewOsFs(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SetFs(tt.want)
+			if fsys != tt.want {
+				t.Errorf("SetFs() = %v, want %v", fsys, tt.want)
+			}
+		})
+	}
+}
+
 func setup(t *testing.T, path string, cfg Loadable, fallbacks ...Fallback) {
 	t.Helper()
 	if path == "" {
