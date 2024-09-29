@@ -487,7 +487,7 @@ func TestClient_RateLimiter(t *testing.T) {
 func TestWithDelay(t *testing.T) {
 	delay := 5 * time.Second
 	request := &Request{
-		Request: &http.Request{},
+		Http: &http.Request{},
 	}
 	WithDelay(delay)(request)
 
@@ -499,21 +499,21 @@ func TestWithDelay(t *testing.T) {
 func TestWithHeader(t *testing.T) {
 	key, value := "X-Custom-Header", "CustomValue"
 	request := &Request{
-		Request: &http.Request{
+		Http: &http.Request{
 			Header: http.Header{},
 		},
 	}
 	WithHeader(key, value)(request)
 
-	if request.Request.Header.Get(key) != value {
-		t.Errorf("WithHeader() = %v, want %v", request.Request.Header.Get(key), value)
+	if request.Http.Header.Get(key) != value {
+		t.Errorf("WithHeader() = %v, want %v", request.Http.Header.Get(key), value)
 	}
 }
 
 func TestWithBasicAuth(t *testing.T) {
 	username, password := "user", "password"
 	request := &Request{
-		Request: &http.Request{
+		Http: &http.Request{
 			Header: http.Header{},
 		},
 	}
@@ -521,22 +521,22 @@ func TestWithBasicAuth(t *testing.T) {
 
 	auth := fmt.Sprintf("%s:%s", username, password)
 	auth = base64.StdEncoding.EncodeToString([]byte(auth))
-	if request.Request.Header.Get("Authorization") != fmt.Sprintf("Basic %s", auth) {
-		t.Errorf("WithBasicAuth() = %v, want %v", request.Request.Header.Get("Authorization"), fmt.Sprintf("%s:%s", username, password))
+	if request.Http.Header.Get("Authorization") != fmt.Sprintf("Basic %s", auth) {
+		t.Errorf("WithBasicAuth() = %v, want %v", request.Http.Header.Get("Authorization"), fmt.Sprintf("%s:%s", username, password))
 	}
 }
 
 func TestWithBearer(t *testing.T) {
 	token := "token"
 	request := &Request{
-		Request: &http.Request{
+		Http: &http.Request{
 			Header: http.Header{},
 		},
 	}
 	WithBearer(token)(request)
 
-	if request.Request.Header.Get("Authorization") != fmt.Sprintf("Bearer %s", token) {
-		t.Errorf("WithBearer() = %v, want %v", request.Request.Header.Get("Authorization"), fmt.Sprintf("Bearer %s", token))
+	if request.Http.Header.Get("Authorization") != fmt.Sprintf("Bearer %s", token) {
+		t.Errorf("WithBearer() = %v, want %v", request.Http.Header.Get("Authorization"), fmt.Sprintf("Bearer %s", token))
 	}
 }
 
@@ -546,13 +546,13 @@ func TestWithTracer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
-	request := &Request{Request: req}
+	request := &Request{Http: req}
 	c := &httptrace.ClientTrace{
 		GetConn: func(hostPort string) {},
 	}
 	WithTracer(c)(request)
 
-	got := httptrace.ContextClientTrace(request.Request.Context())
+	got := httptrace.ContextClientTrace(request.Http.Context())
 	if got == nil {
 		t.Fatalf("WithTracer() did not set ClientTrace in context")
 	}

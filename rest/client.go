@@ -95,8 +95,8 @@ type ResponseHandler func(*http.Response) error
 
 // Request represents a request to be made by the rest client.
 type Request struct {
-	// Request is the HTTP request to be made.
-	Request *http.Request
+	// Http is the HTTP request to be made.
+	Http *http.Request
 	// Delay is the amount of time to wait before executing the request.
 	Delay time.Duration
 	// ResponseHandler is the handler to be called when the response is received.
@@ -216,7 +216,7 @@ func (r *restClient) do(ctx context.Context, endpoint *Endpoint, payload, respon
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	request := &Request{Request: req, Delay: 0, ResponseHandler: handleResponse(response)}
+	request := &Request{Http: req, Delay: 0, ResponseHandler: handleResponse(response)}
 	for _, opt := range opts {
 		opt(request)
 	}
@@ -231,7 +231,7 @@ func (r *restClient) do(ctx context.Context, endpoint *Endpoint, payload, respon
 
 	r.wg.Add(1)
 	defer r.wg.Done()
-	resp, err := r.client.Do(request.Request)
+	resp, err := r.client.Do(request.Http)
 	if err != nil {
 		return 0, fmt.Errorf("failed to make request: %w", err)
 	}
@@ -289,7 +289,7 @@ func WithDelay(d time.Duration) RequestOption {
 // WithHeader is a request option that sets custom headers for the request
 func WithHeader(key, value string) RequestOption {
 	return func(r *Request) {
-		r.Request.Header.Set(key, value)
+		r.Http.Header.Set(key, value)
 	}
 }
 
@@ -301,14 +301,14 @@ func WithBearer(token string) RequestOption {
 // WithBasicAuth is a request option that sets basic auth for the request
 func WithBasicAuth(username, password string) RequestOption {
 	return func(r *Request) {
-		r.Request.SetBasicAuth(username, password)
+		r.Http.SetBasicAuth(username, password)
 	}
 }
 
 // WithTracer is a request option that sets a [httptrace.ClientTrace] for the request.
 func WithTracer(c *httptrace.ClientTrace) RequestOption {
 	return func(r *Request) {
-		r.Request = r.Request.WithContext(httptrace.WithClientTrace(r.Request.Context(), c))
+		r.Http = r.Http.WithContext(httptrace.WithClientTrace(r.Http.Context(), c))
 	}
 }
 
