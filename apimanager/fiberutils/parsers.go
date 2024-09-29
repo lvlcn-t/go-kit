@@ -105,7 +105,7 @@ func ParseDateTime(format ...string) Parser[time.Time] {
 
 // bitSize constants for various types.
 const (
-	bitSize8 = 1 << (iota + 3)
+	bitSize8 int = 1 << (iota + 3)
 	bitSize16
 	bitSize32
 	bitSize64

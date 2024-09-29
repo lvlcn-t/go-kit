@@ -112,16 +112,16 @@ var _ Client = (*restClient)(nil)
 const (
 	// DefaultTimeout is the default timeout for requests.
 	DefaultTimeout = 30 * time.Second
-	// maxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts.
-	maxIdleConns = 100
-	// maxIdleConnsPerHost controls the maximum number of idle (keep-alive) connections to keep per-host.
-	maxIdleConnsPerHost = 100
 	// idleConnTimeout controls the maximum amount of time an idle (keep-alive) connection will remain idle before closing itself.
 	idleConnTimeout = 90 * time.Second
+	// maxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts.
+	maxIdleConns int = 100
+	// maxIdleConnsPerHost controls the maximum number of idle (keep-alive) connections to keep per-host.
+	maxIdleConnsPerHost int = 100
 	// maxRequestRate is the maximum number of requests that can be made in a single second.
 	maxRequestRate rate.Limit = 10
 	// maxRequestBurst is the maximum number of requests that can be made in a single moment.
-	maxRequestBurst = 10
+	maxRequestBurst int = 10
 )
 
 // restClient is the default implementation of the Client interface.
