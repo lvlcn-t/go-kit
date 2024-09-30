@@ -321,7 +321,7 @@ func (s *server) attachRoutes(ctx context.Context) (err error) {
 
 // Shutdown gracefully shuts down the server.
 func (s *server) Shutdown(ctx context.Context) error {
-	c, cancel := newContextWithTimeout(ctx)
+	c, cancel := context.WithTimeout(ctx, shutdownTimeout)
 	defer cancel()
 
 	return errors.Join(ctx.Err(), s.app.ShutdownWithContext(c))
@@ -411,16 +411,6 @@ func (s *server) addHealthzRoute() {
 		Methods: []string{http.MethodGet},
 		Handler: OkHandler,
 	})
-}
-
-// newContextWithTimeout returns a new context with a timeout.
-func newContextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
-	if deadline, ok := ctx.Deadline(); ok {
-		if time.Until(deadline) < shutdownTimeout {
-			return context.WithDeadline(ctx, deadline)
-		}
-	}
-	return context.WithTimeout(ctx, shutdownTimeout)
 }
 
 // isValid checks if the provided method is a valid HTTP method.
