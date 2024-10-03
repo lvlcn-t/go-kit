@@ -16,12 +16,8 @@ import (
 	"github.com/lvlcn-t/loggerhead/logger"
 )
 
-const (
-	// MethodUse is a custom HTTP method to indicate that a route should be registered for all HTTP methods.
-	MethodUse = "USE"
-	// shutdownTimeout is the timeout for the server to shut down.
-	shutdownTimeout = 15 * time.Second
-)
+// shutdownTimeout is the timeout for the server to shut down.
+const shutdownTimeout = 15 * time.Second
 
 // Server is the interface for an API server.
 type Server interface {
@@ -30,13 +26,9 @@ type Server interface {
 	//
 	// Example setup:
 	// 	server := apimanager.New(nil)
-	// 	server.Mount(apimanager.Route{
-	// 		Path:    "/",
-	// 		Methods: []string{http.MethodGet},
-	// 		Handler: func(c fiber.Ctx) error {
-	// 			return c.SendString("Hello, World!")
-	// 		},
-	// 	})
+	// 	server.Mount(apimanager.Get("/", func(c fiber.Ctx) error {
+	// 		return c.SendString("Hello, World!")
+	// 	}))
 	// 	// The server will listen on the default address ":8080" and respond with "Hello, World!" on a GET request to "/".
 	// 	server.Run(context.Background())
 	Run(ctx context.Context) error
@@ -56,28 +48,6 @@ type Server interface {
 	Mounted() (routes []Route, groups []RouteGroup, middlewares []fiber.Handler)
 	// Config returns the configuration of the server.
 	Config() Config
-}
-
-// Route is a route to register to the server.
-type Route struct {
-	// Path is the path of the route.
-	Path string
-	// Methods is the HTTP method of the route.
-	// To register the route to all http methods, use [MethodUse].
-	// [MethodUse] is mutually exclusive with other methods.
-	Methods []string
-	// Handler is the handler function of the route.
-	Handler fiber.Handler
-	// Middlewares are the middlewares to use for the route.
-	Middlewares []fiber.Handler
-}
-
-// RouteGroup is a route to register a sub-app to.
-type RouteGroup struct {
-	// Path is the path of the route.
-	Path string
-	// App is the fiber sub-app to use.
-	App fiber.Router
 }
 
 // Config is the configuration of the server.
@@ -237,7 +207,7 @@ func (s *server) Mount(routes ...Route) error {
 				break
 			}
 
-			if !isValid(strings.ToUpper(method)) {
+			if !isMethodValid(strings.ToUpper(method)) {
 				return fmt.Errorf("route %q has invalid method %q", routes[i].Path, method)
 			}
 		}
@@ -411,25 +381,6 @@ func (s *server) addHealthzRoute() {
 		Methods: []string{http.MethodGet},
 		Handler: OkHandler,
 	})
-}
-
-// isValid checks if the provided method is a valid HTTP method.
-func isValid(method string) bool {
-	switch method {
-	case
-		http.MethodGet,
-		http.MethodHead,
-		http.MethodPost,
-		http.MethodPut,
-		http.MethodPatch,
-		http.MethodDelete,
-		http.MethodConnect,
-		http.MethodOptions,
-		http.MethodTrace:
-		return true
-	default:
-		return false
-	}
 }
 
 // toggleRunning toggles the running state of the server.
