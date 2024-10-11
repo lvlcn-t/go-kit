@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 
 MODULES := $(shell go list -m | cut -d'/' -f 4- | sed 's/^/.\//')
-VERSION := "v0.3.0"
+VERSION := $(shell git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" 2>/dev/null)
 
 .PHONY: help
 help: ### Display this help
