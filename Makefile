@@ -34,7 +34,7 @@ lint: ### Runs linters on all modules
 
 .PHONY: example
 example: ### Runs the example for [MODULE]
-	@if [ -z "$(MODULE)" ]; then \
+	@if [[ -z "$(MODULE)" ]]; then \
 		echo "No module found"; \
 		exit 1; \
 	fi
@@ -44,7 +44,7 @@ example: ### Runs the example for [MODULE]
 
 .PHONY: tag
 tag: ### Tags the [MODULE] with [VERSION]
-	@if [ -z "$(VERSION)" || -z "$(MODULE)" ]; then \
+	@if [[ -z "$(VERSION)" || -z "$(MODULE)" ]]; then \
 		echo "No version or module found"; \
 		exit 1; \
 	fi
@@ -61,7 +61,7 @@ tag: ### Tags the [MODULE] with [VERSION]
 
 .PHONY: tag-all
 tag-all: ### Tags all modules with [VERSION]
-	@if [ -z "$(VERSION)" ]; then \
+	@if [[ -z "$(VERSION)" ]]; then \
 		echo "No version found"; \
 		exit 1; \
 	fi
@@ -73,7 +73,7 @@ tag-all: ### Tags all modules with [VERSION]
 	fi
 	@echo ""
 	@for module in $(MODULES); do \
-		if [ $$(basename $$module) == "example" ]; then \
+		if [[ $$(basename $$module) == "example" ]]; then \
 			continue; \
 		fi; \
 		tag=$$(basename $$module)/$(VERSION); \
