@@ -55,6 +55,7 @@ tag: ### Tags the [MODULE] with [VERSION]
 		exit 1; \
 	fi
 	@tag=$$(basename $(MODULE))/$(VERSION); \
+	echo ""; \
 	echo "Tagging $(MODULE) with $$tag"; \
 	git tag $$tag; \
 	git push origin $$tag;
