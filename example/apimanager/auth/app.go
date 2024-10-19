@@ -29,8 +29,10 @@ func main() {
 	defer cancel()
 	log := logger.FromContext(ctx)
 
-	// Create an auth provider with the required configuration
-	provider, err := middleware.NewAuthProvider(ctx, &middleware.AuthConfig{
+	// Create an authenticator with the required configuration and the expected claims type
+	// Alternatively if you don't need to specify the claims type, you can use [middleware.NewDefaultAuthenticator]
+	// to create an authenticator with the default claims type (map[string]any).
+	authenticator, err := middleware.NewAuthenticator[Claims](ctx, &middleware.AuthConfig{
 		Config: oidc.Config{
 			ClientID: os.Getenv("CLIENT_ID"),
 		},
@@ -47,18 +49,15 @@ func main() {
 	server := apimanager.New(&apimanager.Config{
 		Address: ":8080",
 	})
-	err = server.Mount(apimanager.Route{
-		Path:    "/",
-		Methods: []string{http.MethodGet},
-		Handler: func(c fiber.Ctx) error {
-			return c.Status(http.StatusOK).JSON(fiber.Map{
-				"message": "Hello, World!",
-			})
-		},
-		Middlewares: []fiber.Handler{
-			middleware.AuthenticateWithClaims[Claims](provider),
-		},
-	})
+
+	// Mount a route with the auth middleware
+	route := apimanager.Get("/", func(c fiber.Ctx) error {
+		return c.Status(http.StatusOK).JSON(fiber.Map{
+			"message": "Successfully authenticated",
+			"claims":  c.Locals("claims"),
+		})
+	}, authenticator.Authenticate())
+	err = server.Mount(route)
 	if err != nil {
 		log.FatalContext(ctx, "Failed to mount route", err)
 	}
