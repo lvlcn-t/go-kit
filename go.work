@@ -4,6 +4,7 @@ use (
 	./apimanager
 	./config
 	./dependency
+	./env
 	./example
 	./executors
 	./lists

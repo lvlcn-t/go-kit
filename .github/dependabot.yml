@@ -5,6 +5,7 @@ updates:
       - "/apimanager"
       - "/config"
       - "/dependency"
+      - "/env"
       - "/executors"
       - "/lists"
       - "/metrics"
