@@ -1,7 +1,7 @@
 package env_test
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"strconv"
 	"testing"
@@ -164,7 +164,7 @@ func TestGet_CustomConverter(t *testing.T) {
 		if s == "custom" {
 			return "converted", nil
 		}
-		return "", fmt.Errorf("conversion failed")
+		return "", errors.New("conversion failed")
 	}
 
 	value, err := env.Get[string]("TEST_VAR").WithFallback("default").Convert(converter).Value()

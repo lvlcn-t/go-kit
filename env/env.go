@@ -2,6 +2,7 @@ package env
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"reflect"
 )
@@ -113,7 +114,7 @@ func GetWithFallback[T any](key string, defaultValue T, converter ...Converter[T
 
 	v, err := Get[T](key).WithFallback(defaultValue).Convert(c).Value()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		slog.Error("Failed to get environment variable", "key", key, "error", err)
 	}
 	return v
 }
