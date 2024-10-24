@@ -20,10 +20,11 @@ func main() {
 	fmt.Println(env.MustGet[int]("MY_INT"))
 	fmt.Println(env.MustGet("MY_DURATION", time.ParseDuration))
 
-	// Read a couple of environment variables that are necessary but you want to handle the errors gracefully.
+	// Read an environment variable that is necessary but you want to handle the error gracefully.
 	value, err := env.Get[bool]("MY_BOOL").NoFallback().Value()
 	if err != nil {
 		fmt.Println("Failed to get MY_BOOL:", err)
+		return
 	}
 	fmt.Println(value)
 }
