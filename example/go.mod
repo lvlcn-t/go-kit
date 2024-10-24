@@ -7,7 +7,8 @@ require (
 	github.com/gofiber/fiber/v3 v3.0.0-beta.3
 	github.com/lvlcn-t/go-kit/apimanager v0.3.0
 	github.com/lvlcn-t/go-kit/config v0.3.0
-	github.com/lvlcn-t/go-kit/dependency v0.0.0-20240813221656-294916221526
+	github.com/lvlcn-t/go-kit/dependency v0.1.0
+	github.com/lvlcn-t/go-kit/env v0.0.0-00010101000000-000000000000
 	github.com/lvlcn-t/go-kit/executors v0.3.0
 	github.com/lvlcn-t/go-kit/metrics v0.3.0
 	github.com/lvlcn-t/go-kit/rest v0.1.0
@@ -22,6 +23,7 @@ replace (
 	github.com/lvlcn-t/go-kit/apimanager => ../apimanager
 	github.com/lvlcn-t/go-kit/config => ../config
 	github.com/lvlcn-t/go-kit/dependency => ../dependency
+	github.com/lvlcn-t/go-kit/env => ../env
 	github.com/lvlcn-t/go-kit/executors => ../executors
 	github.com/lvlcn-t/go-kit/lists => ../lists
 	github.com/lvlcn-t/go-kit/metrics => ../metrics

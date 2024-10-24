@@ -119,6 +119,30 @@ func GetWithFallback[T any](key string, defaultValue T, converter ...Converter[T
 	return v
 }
 
+// MustGet retrieves an environment variable and tries to convert it to the desired type.
+// If the environment variable is not set or the conversion fails, it panics.
+//
+// Example:
+//
+//	// Get the environment variable "MY_VAR" as a string and panic if an error occurs.
+//	value := env.MustGet[string]("MY_VAR")
+//
+//	// Get the environment variable "MY_VAR" as an integer and panic if an error occurs.
+//	value := env.MustGet[int]("MY_VAR")
+//
+//	// Get the environment variable "MY_VAR" as a [time.Duration] using a custom converter and panic if an error occurs.
+//	value := env.MustGet[time.Duration]("MY_VAR", time.ParseDuration)
+func MustGet[T any](key string, converter ...Converter[T]) T {
+	var c Converter[T]
+	if len(converter) > 0 {
+		c = converter[0]
+	}
+
+	// We can safely ignore the error here because the die flag is set.
+	v, _ := Get[T](key).OrDie().Convert(c).Value()
+	return v
+}
+
 // OrDie sets the die flag to panic if the environment variable is not set or an error occurs.
 //
 // Panics when used in combination with WithFallback.
