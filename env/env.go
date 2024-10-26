@@ -1,6 +1,7 @@
 package env
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -70,22 +71,31 @@ type variable[T any] struct {
 // Example:
 //
 //	// Get the environment variable "MY_VAR" as a string and panic if an error occurs.
-//	value := env.Get[string]("MY_VAR").OrDie().Value()
+//	value, _ := env.Get[string]("MY_VAR").OrDie().Value()
 //
 //	// Get the environment variable "MY_VAR" as an integer.
 //	// If the variable is not set or an error occurs, return 42.
-//	value := env.Get[int]("MY_VAR").WithFallback(42).Value()
+//	value, _ := env.Get[int]("MY_VAR").WithFallback(42).Value()
 //
 //	// Get the environment variable "MY_VAR" as a [time.Duration] using a custom converter.
 //	// If the variable is not set or an error occurs, return 5 * time.Second.
-//	value := env.Get[time.Duration]("MY_VAR").WithFallback(5*time.Second).Convert(time.ParseDuration).Value()
+//	value, _ := env.Get[time.Duration]("MY_VAR").WithFallback(5*time.Second).Convert(time.ParseDuration).Value()
 //
 //	// Get the environment variable "MY_VAR" as a boolean.
 //	// If the variable is not set or an error occurs, return the error.
 //	value, err := env.Get[bool]("MY_VAR").NoFallback().Value()
 func Get[T any](key string) Variable[T] {
-	if reflect.TypeFor[T]().Kind() == reflect.Interface {
-		panic(fmt.Errorf("cannot use %v as type for an environment variable", reflect.TypeFor[T]()))
+	t := reflect.TypeFor[T]()
+	if t != nil && t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+
+	switch t.Kind() {
+	// These are invalid types for an environment variable.
+	case reflect.Invalid:
+		panic(errors.New("<nil> is not a valid type for an environment variable"))
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.UnsafePointer:
+		panic(fmt.Errorf("cannot use %v as type for an environment variable", t))
 	}
 	return &variable[T]{key: key}
 }

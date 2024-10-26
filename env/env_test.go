@@ -3,6 +3,7 @@ package env_test
 import (
 	"errors"
 	"os"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -102,6 +103,79 @@ func TestGetWithFallback(t *testing.T) {
 			want:        42,
 			invalidType: true,
 		},
+		{
+			name:         "Channel variable with custom converter",
+			key:          "TEST_CHANNEL",
+			envValue:     "42",
+			defaultValue: 0,
+			fun: func(s string, a any) any {
+				return env.GetWithFallback(s, func(s string) (chan any, error) {
+					return make(chan any, 1), nil
+				})
+			},
+			invalidType: true,
+		},
+		{
+			name:         "Pointer string variable set",
+			key:          "TEST_POINTER",
+			envValue:     "my-var",
+			defaultValue: toPtr("default"),
+			fun: func(s string, a any) any {
+				return env.GetWithFallback(s, a.(*string))
+			},
+			want:        toPtr("my-var"),
+			invalidType: false,
+		},
+		{
+			name:         "Pointer int variable set",
+			key:          "TEST_POINTER_NOT_SET",
+			envValue:     "42",
+			defaultValue: toPtr(50),
+			fun: func(s string, a any) any {
+				return env.GetWithFallback(s, a.(*int))
+			},
+			want: toPtr(42),
+		},
+		{
+			name:         "Pointer uint variable set",
+			key:          "TEST_POINTER_UINT",
+			envValue:     "42",
+			defaultValue: toPtr(uint(50)),
+			fun: func(s string, a any) any {
+				return env.GetWithFallback(s, a.(*uint))
+			},
+			want: toPtr(uint(42)),
+		},
+		{
+			name:         "Pointer bool variable set",
+			key:          "TEST_POINTER_BOOL",
+			envValue:     "true",
+			defaultValue: toPtr(false),
+			fun: func(s string, a any) any {
+				return env.GetWithFallback(s, a.(*bool))
+			},
+			want: toPtr(true),
+		},
+		{
+			name:         "Pointer float64 variable set",
+			key:          "TEST_POINTER_FLOAT64",
+			envValue:     "42.42",
+			defaultValue: toPtr(50.50),
+			fun: func(s string, a any) any {
+				return env.GetWithFallback(s, a.(*float64))
+			},
+			want: toPtr(42.42),
+		},
+		{
+			name:         "Pointer complex128 variable set",
+			key:          "TEST_POINTER_COMPLEX128",
+			envValue:     "42.42+42.42i",
+			defaultValue: toPtr(50.50 + 50.50i),
+			fun: func(s string, a any) any {
+				return env.GetWithFallback(s, a.(*complex128))
+			},
+			want: toPtr(42.42 + 42.42i),
+		},
 	}
 
 	for _, tt := range tests {
@@ -121,11 +195,22 @@ func TestGetWithFallback(t *testing.T) {
 			}
 
 			got := tt.fun(tt.key, tt.defaultValue)
-			if got != tt.want {
+			if reflect.TypeOf(got).Kind() == reflect.Pointer {
+				got = reflect.ValueOf(got).Elem().Interface()
+			}
+			if reflect.TypeOf(tt.want).Kind() == reflect.Pointer {
+				tt.want = reflect.ValueOf(tt.want).Elem().Interface()
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Got %v (%T), want %v (%T)", got, got, tt.want, tt.want)
 			}
 		})
 	}
+}
+
+func toPtr[T any](v T) *T {
+	return &v
 }
 
 func TestGet_WithFallback(t *testing.T) {
