@@ -139,6 +139,8 @@ type restClient struct {
 
 // New creates a new rest client with the given base URL.
 // You can optionally provide a timeout for requests. If no timeout is provided, the [DefaultTimeout] will be used.
+//
+// Deprecated: Use [NewWithClient] instead.
 func New(baseURL string, timeout ...time.Duration) (Client, error) {
 	if len(timeout) == 0 {
 		return NewWithClient(baseURL, nil)
@@ -340,7 +342,7 @@ func WithErrorHandler(errorHandler, successHandler ResponseHandler) RequestOptio
 // defaultClient creates a new [restClient] without a base URL.
 // Panics if the client cannot be created.
 func defaultClient() Client {
-	c, err := New("")
+	c, err := NewWithClient("", nil)
 	if err != nil {
 		panic(fmt.Errorf("failed to create default client: %w", err))
 	}

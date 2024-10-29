@@ -51,26 +51,34 @@ func TestDefaultClient_Do(t *testing.T) {
 	}
 }
 
-func TestNewClient(t *testing.T) {
+func TestNewWithClient(t *testing.T) {
 	tests := []struct {
 		name    string
 		baseURL string
+		client  *http.Client
 		wantErr bool
 	}{
 		{
 			name:    "valid base URL",
 			baseURL: "https://example.com",
+			client:  nil,
 		},
 		{
 			name:    "invalid base URL",
 			baseURL: "://:?https://example.com",
+			client:  nil,
 			wantErr: true,
+		},
+		{
+			name:    "custom client",
+			baseURL: "https://example.com",
+			client:  http.DefaultClient,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := New(tt.baseURL, 5*time.Second)
+			_, err := NewWithClient(tt.baseURL, tt.client)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewClient() error = %v, wantErr %v", err, tt.wantErr)
 			}
