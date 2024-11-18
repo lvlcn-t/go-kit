@@ -83,7 +83,7 @@ func Concurrent(effectors ...Effector) Effector {
 		errs := make(chan error, len(effectors))
 		for _, effector := range effectors {
 			g.Go(func() error {
-				err := effector(ctx)
+				err := effector.Do(ctx)
 				errs <- err
 				return err
 			})
@@ -111,7 +111,7 @@ func Sequential(effectors ...Effector) Effector {
 	return func(ctx context.Context) error {
 		var errs []error
 		for _, effector := range effectors {
-			errs = append(errs, effector(ctx))
+			errs = append(errs, effector.Do(ctx))
 		}
 		return errors.Join(errs...)
 	}
