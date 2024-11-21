@@ -12,11 +12,9 @@ import (
 
 func main() {
 	ctx := context.Background()
-
 	// Initialize the metrics client with the given exporter, URL, token, and certificate path
 	client := metrics.New(metrics.Config{
 		Exporter: metrics.STDOUT,
-		CertPath: "",
 	})
 
 	// Initialize the open telemetry tracer with the given service name and version

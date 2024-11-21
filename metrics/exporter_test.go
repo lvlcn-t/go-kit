@@ -75,6 +75,15 @@ func TestGetTLSConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:     "success - use system cert pool",
+			certPath: "",
+			fileOpen: func(name string) (fs.File, error) {
+				panic("should not be called")
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
 			name:     "failure - invalid cert path",
 			certPath: "testdata/invalid_cert.pem",
 			fileOpen: func(name string) (fs.File, error) {
@@ -109,6 +118,13 @@ func TestGetTLSConfig(t *testing.T) {
 				t.Errorf("getTLSConfig() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantErr {
+				return
+			}
+
+			if tt.want == nil {
+				if conf != nil {
+					t.Errorf("getTLSConfig() = %v, want %v", conf, tt.want)
+				}
 				return
 			}
 

@@ -17,15 +17,24 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// Config holds the configuration for OpenTelemetry
+// Config holds the configuration for OpenTelemetry.
 type Config struct {
-	// Exporter is the otlp exporter used to export the traces
+	// Exporter is the otlp exporter used to export the traces.
 	Exporter Exporter `yaml:"exporter" mapstructure:"exporter"`
-	// Url is the Url of the collector to which the traces are exported
+	// Url is the Url of the collector to which the traces are exported.
 	Url string `yaml:"url" mapstructure:"url"`
-	// Token is the token used to authenticate with the collector
+	// Token is the token used to authenticate with the collector.
 	Token string `yaml:"token" mapstructure:"token"`
-	// CertPath is the path to the tls certificate file
+	// TLS is the tls configuration for the exporter.
+	TLS TLSConfig `yaml:"tls" mapstructure:"tls"`
+}
+
+// TLSConfig holds the configuration for the tls.
+type TLSConfig struct {
+	// Enabled is a flag to enable or disable the tls configuration.
+	Enabled bool `yaml:"enabled" mapstructure:"enabled"`
+	// CertPath is the path to a custom tls certificate file.
+	// If not set, the system's root certificates are used.
 	CertPath string `yaml:"certPath" mapstructure:"certPath"`
 }
 
@@ -37,10 +46,8 @@ func (c Config) IsEmpty() bool {
 // Validate validates the configuration.
 func (c *Config) Validate() error {
 	err := c.Exporter.Validate()
-	if c.Exporter.isExporting() {
-		if c.Url == "" {
-			err = errors.Join(err, fmt.Errorf("url is required for otlp exporter %q", c.Exporter))
-		}
+	if c.Exporter.isExporting() && c.Url == "" {
+		err = errors.Join(err, fmt.Errorf("url is required for otlp exporter %q", c.Exporter))
 	}
 	return err
 }
@@ -108,19 +115,22 @@ func (e Exporter) RegisterExporter(factory exporterFactory) error {
 
 // newHTTPExporter creates a new HTTP exporter
 func newHTTPExporter(ctx context.Context, config *Config) (sdktrace.SpanExporter, error) {
-	headers, tlsCfg, err := getCommonConfig(config)
+	conf, err := newExporterConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
 	opts := []otlptracehttp.Option{
 		otlptracehttp.WithEndpoint(config.Url),
-		otlptracehttp.WithHeaders(headers),
+		otlptracehttp.WithHeaders(conf.headers),
 	}
-	if tlsCfg != nil {
-		opts = append(opts, otlptracehttp.WithTLSClientConfig(tlsCfg))
-	} else {
+
+	if !config.TLS.Enabled {
 		opts = append(opts, otlptracehttp.WithInsecure())
+		return otlptracehttp.New(ctx, opts...)
+	}
+	if conf.tls != nil {
+		opts = append(opts, otlptracehttp.WithTLSClientConfig(conf.tls))
 	}
 
 	return otlptracehttp.New(ctx, opts...)
@@ -128,19 +138,22 @@ func newHTTPExporter(ctx context.Context, config *Config) (sdktrace.SpanExporter
 
 // newGRPCExporter creates a new gRPC exporter
 func newGRPCExporter(ctx context.Context, config *Config) (sdktrace.SpanExporter, error) {
-	headers, tlsCfg, err := getCommonConfig(config)
+	conf, err := newExporterConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
 	opts := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(config.Url),
-		otlptracegrpc.WithHeaders(headers),
+		otlptracegrpc.WithHeaders(conf.headers),
 	}
-	if tlsCfg != nil {
-		opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(tlsCfg)))
-	} else {
+
+	if !config.TLS.Enabled {
 		opts = append(opts, otlptracegrpc.WithInsecure())
+		return otlptracegrpc.New(ctx, opts...)
+	}
+	if conf.tls != nil {
+		opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(conf.tls)))
 	}
 
 	return otlptracegrpc.New(ctx, opts...)
@@ -156,33 +169,39 @@ func newNoopExporter(_ context.Context, _ *Config) (sdktrace.SpanExporter, error
 	return nil, nil
 }
 
-// getCommonConfig returns the common configuration for the exporters
-func getCommonConfig(config *Config) (map[string]string, *tls.Config, error) {
-	headers := make(map[string]string)
+// exporterConfig holds the common configuration for the exporters.
+type exporterConfig struct {
+	// headers is the map of headers to be sent with the request.
+	headers map[string]string
+	// tls is the tls configuration for the exporter.
+	tls *tls.Config
+}
+
+// newExporterConfig returns the common configuration for the exporters
+func newExporterConfig(config *Config) (exporterConfig, error) {
+	headers := map[string]string{}
 	if config.Token != "" {
 		headers["Authorization"] = fmt.Sprintf("Bearer %s", config.Token)
 	}
 
-	tlsCfg, err := getTLSConfig(config.CertPath)
+	tlsCfg, err := getTLSConfig(config.TLS.CertPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create TLS configuration: %w", err)
+		return exporterConfig{}, fmt.Errorf("failed to create TLS configuration: %w", err)
 	}
 
-	return headers, tlsCfg, nil
+	return exporterConfig{headers: headers, tls: tlsCfg}, nil
 }
 
 // fileOpener is the function used to open a file
 type fileOpener func(string) (fs.File, error)
 
 // openFile is the function used to open a file
-var openFile fileOpener = func() fileOpener {
-	return func(name string) (fs.File, error) {
-		return os.Open(name) // #nosec G304 // How else to open the file?
-	}
-}()
+var openFile fileOpener = func(name string) (fs.File, error) {
+	return os.Open(name) // #nosec G304 // How else to open the file?
+}
 
 func getTLSConfig(certFile string) (conf *tls.Config, err error) {
-	if certFile == "" || certFile == "insecure" {
+	if certFile == "" {
 		return nil, nil
 	}
 
