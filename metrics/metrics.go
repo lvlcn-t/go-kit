@@ -32,6 +32,12 @@ type Collector interface {
 	GetRegistry() *prometheus.Registry
 }
 
+// Tracker is the interface that wraps the basic methods of the OpenTelemetry tracer and Prometheus collector.
+type Tracker interface {
+	Tracer
+	Collector
+}
+
 // manager implements the Tracer and Collector interfaces
 // It is used to initialize the OpenTelemetry manager and Prometheus collectors
 type manager struct {
@@ -45,7 +51,7 @@ type manager struct {
 
 // New creates a new metrics instance with the given configuration.
 // This instance can be used to initialize the OpenTelemetry metrics and Prometheus collectors.
-func New(config Config) *manager {
+func New(config Config) Tracker {
 	registry := prometheus.NewRegistry()
 
 	registry.MustRegister(

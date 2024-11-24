@@ -43,9 +43,7 @@ func TestNew(t *testing.T) {
 	)
 
 	t.Run("Register a collector", func(t *testing.T) {
-		testMetrics.registry.MustRegister(
-			testGauge,
-		)
+		testMetrics.GetRegistry().MustRegister(testGauge)
 	})
 }
 
@@ -123,7 +121,7 @@ func TestTracer_Initialize_Shutdown(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := New(tt.config)
+			m := New(tt.config).(*manager)
 			if _, ok := tt.wantErr.(*ErrAlreadyInitialized); ok {
 				m.tracer = sdktrace.NewTracerProvider()
 			}
