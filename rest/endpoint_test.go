@@ -95,7 +95,7 @@ func TestEndpoint_Compile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.e.Compile(tt.baseURL)
+			got, err := tt.e.Build(tt.baseURL)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Endpoint.Compile() error = %v, wantErr %v", err, tt.wantErr)
 				return

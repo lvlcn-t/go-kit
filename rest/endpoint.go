@@ -50,8 +50,8 @@ func (e *Endpoint) AddQuery(key, value string) *Endpoint {
 	return e
 }
 
-// Compile compiles the endpoint into a full URL.
-func (e *Endpoint) Compile(baseURL string) (string, error) {
+// Build builds the full URL for the endpoint using the given base URL.
+func (e *Endpoint) Build(baseURL string) (string, error) {
 	base, err := url.Parse(baseURL)
 	if err != nil {
 		return "", err

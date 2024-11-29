@@ -324,7 +324,7 @@ func TestClient_Do(t *testing.T) { //nolint:gocyclo // Either complexity or dupl
 			}
 
 			if !tt.invalidURL {
-				u, e := tt.endpoint.Compile(c.baseURL)
+				u, e := tt.endpoint.Build(c.baseURL)
 				if e != nil && !tt.wantErr {
 					t.Fatalf("Failed to compile endpoint: %v", err)
 				}

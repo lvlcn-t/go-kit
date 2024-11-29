@@ -207,7 +207,7 @@ func (r *restClient) do(ctx context.Context, endpoint *Endpoint, payload, respon
 		body = bytes.NewBuffer(data)
 	}
 
-	u, err := endpoint.Compile(r.baseURL)
+	u, err := endpoint.Build(r.baseURL)
 	if err != nil {
 		return 0, fmt.Errorf("failed to compile endpoint: %w", err)
 	}
