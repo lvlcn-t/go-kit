@@ -52,6 +52,10 @@ type TypedVariable[T any] interface {
 	//
 	// If the environment variable is not set or an error occurs, it either returns preconditioned values and an error or panics if the die flag is set.
 	Value() (T, error)
+	// Raw retrieves the environment variable value as a string without converting it to type T.
+	//
+	// If the environment variable is not set or an error occurs, it returns the zero value of type T and the error.
+	Raw() (string, error)
 }
 
 // variable represents the builder for an environment variable of type T.
@@ -191,6 +195,16 @@ func (v *variable[T]) WithFallback(defaultValue T) OptionalVariable[T] {
 func (v *variable[T]) Convert(converter Converter[T]) TypedVariable[T] {
 	v.converter = converter
 	return v
+}
+
+// Raw retrieves the environment variable value as a string without converting it to type T.
+func (v *variable[T]) Raw() (string, error) {
+	val, ok := os.LookupEnv(v.key)
+	if !ok {
+		_, err := v.handleError(nil)
+		return "", err
+	}
+	return val, nil
 }
 
 // Value retrieves the environment variable value.

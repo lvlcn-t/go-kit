@@ -209,10 +209,6 @@ func TestGetWithFallback(t *testing.T) {
 	}
 }
 
-func toPtr[T any](v T) *T {
-	return &v
-}
-
 func TestGet_WithFallback(t *testing.T) {
 	t.Setenv("TEST_VAR", "123")
 
@@ -259,4 +255,26 @@ func TestGet_CustomConverter(t *testing.T) {
 	if value != "converted" {
 		t.Errorf("Expected 'converted', got %s", value)
 	}
+}
+
+func TestGet_Raw(t *testing.T) {
+	t.Setenv("TEST_VAR", "123")
+
+	value, err := env.Get[int]("TEST_VAR").NoFallback().Raw()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if reflect.TypeOf(value).Kind() != reflect.String {
+		t.Errorf("Expected string, got %T", value)
+	}
+
+	if value != "123" {
+		t.Errorf("Expected '123', got %s", value)
+	}
+}
+
+// toPtr returns a pointer to the provided value.
+func toPtr[T any](v T) *T {
+	return &v
 }
