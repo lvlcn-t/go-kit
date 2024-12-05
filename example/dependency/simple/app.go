@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/lvlcn-t/go-kit/dependency"
 )
@@ -23,28 +24,18 @@ func (m *MySecondImplementation) DoSomething() {
 }
 
 func main() {
-	// Provide a dependency.
-	err := dependency.Provide[MyInterface](&MyFirstImplementation{}, false, nil, "my-first-implementation")
-	if err != nil {
-		panic(err)
-	}
+	// Create a new dependency container.
+	c := dependency.NewContainer()
 
-	// Provide another dependency.
-	err = dependency.Provide[MyInterface](&MySecondImplementation{}, false, nil, "my-second-implementation")
-	if err != nil {
-		panic(err)
-	}
+	// Provide some dependencies.
+	c.Provide(
+		dependency.NewSingleton[MyInterface](&MyFirstImplementation{}).Named("my-first-implementation"),
+		dependency.NewFactory(func() MyInterface { return &MySecondImplementation{} }).Named("my-second-implementation"),
+	)
 
-	// Resolve the dependencies.
-	first, err := dependency.Resolve[MyInterface]("my-first-implementation")
-	if err != nil {
-		panic(err)
-	}
-
-	second, err := dependency.Resolve[MyInterface]("my-second-implementation")
-	if err != nil {
-		panic(err)
-	}
+	// Resolve the dependencies by type or name.
+	first := c.Resolve(reflect.TypeFor[MyInterface]()).(MyInterface)
+	second := c.ResolveNamed("my-second-implementation").(MyInterface)
 
 	// Use the dependencies.
 	first.DoSomething()
