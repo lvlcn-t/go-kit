@@ -27,6 +27,7 @@ update: ### Updates all modules to the latest version
 		go get -u; \
 		cd - > /dev/null; \
 	done
+	@go work sync
 
 .PHONY: lint
 lint: ### Runs linters on all modules
