@@ -9,7 +9,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/lvlcn-t/loggerhead v0.3.1
 	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e
-	golang.org/x/oauth2 v0.24.0
+	golang.org/x/oauth2 v0.25.0
 	golang.org/x/text v0.21.0
 )
 
