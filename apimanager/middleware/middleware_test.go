@@ -26,7 +26,7 @@ func TestContext(t *testing.T) {
 			app := fiber.New()
 			_ = app.Use(Context(tt.ctx))
 			_ = app.Get("/", func(c fiber.Ctx) error {
-				if got := c.UserContext().Value(key{}); got != "value" {
+				if got := c.Context().Value(key{}); got != "value" {
 					t.Errorf("expected %v, got %v", "value", got)
 				}
 				return nil

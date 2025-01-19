@@ -151,5 +151,5 @@ func (p Port) Get() uint16 {
 
 // Logger returns a logger with the method and path of the context.
 func Logger(c fiber.Ctx) logger.Logger {
-	return logger.FromContext(c.UserContext()).With("method", c.Method(), "path", c.Path())
+	return logger.FromContext(c.Context()).With("method", c.Method(), "path", c.Path())
 }

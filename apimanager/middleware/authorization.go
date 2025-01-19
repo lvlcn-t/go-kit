@@ -153,16 +153,16 @@ func (a authorizer[T]) Authorize() fiber.Handler {
 			return c.Next()
 		}
 
-		log := logger.FromContext(c.UserContext())
+		log := logger.FromContext(c.Context())
 		claims, ok := c.Locals("claims").(T)
 		if !ok {
-			log.WarnContext(c.Context(), "No claims found or invalid type", "claims", claims)
+			log.WarnContext(c.RequestCtx(), "No claims found or invalid type", "claims", claims)
 			return fiberutils.ForbiddenResponse(c, "no claims found")
 		}
 
 		roles, err := a.extractUserRoles(claims)
 		if err != nil {
-			log.ErrorContext(c.Context(), "Failed to get roles from claims", "error", err)
+			log.ErrorContext(c.RequestCtx(), "Failed to get roles from claims", "error", err)
 			return fiberutils.InternalServerErrorResponse(c, "failed to get roles from claims")
 		}
 
@@ -173,7 +173,7 @@ func (a authorizer[T]) Authorize() fiber.Handler {
 
 		for _, role := range a.roles {
 			if !userRoles[role] {
-				log.DebugContext(c.Context(), "Insufficient permissions", "roles", a.roles)
+				log.DebugContext(c.RequestCtx(), "Insufficient permissions", "roles", a.roles)
 				return fiberutils.ForbiddenResponse(c, "insufficient permissions")
 			}
 		}

@@ -151,22 +151,22 @@ func newAuthenticator[T any](ctx context.Context, c *AuthConfig) (*authProvider[
 // The token claims are stored in the [fiber.Ctx] locals with the key "claims" and are of the provided type T.
 func (p *authProvider[T]) Authenticate() fiber.Handler {
 	return func(c fiber.Ctx) error {
-		log := logger.FromContext(c.UserContext())
+		log := logger.FromContext(c.Context())
 		token, err := extractToken(c)
 		if err != nil {
-			log.DebugContext(c.Context(), "Failed to extract token", "error", err)
+			log.DebugContext(c.RequestCtx(), "Failed to extract token", "error", err)
 			return fiberutils.UnauthorizedResponse(c, err.Error())
 		}
 
-		idToken, err := p.verifier.Verify(c.Context(), token)
+		idToken, err := p.verifier.Verify(c.RequestCtx(), token)
 		if err != nil {
-			log.DebugContext(c.Context(), "Failed to verify token", "error", err)
+			log.DebugContext(c.RequestCtx(), "Failed to verify token", "error", err)
 			return fiberutils.UnauthorizedResponse(c, "invalid token")
 		}
 
 		var claims T
 		if err := idToken.Claims(&claims); err != nil {
-			log.ErrorContext(c.Context(), "Failed to parse token claims", "error", err)
+			log.ErrorContext(c.RequestCtx(), "Failed to parse token claims", "error", err)
 			return fiberutils.InternalServerErrorResponse(c, "failed to parse token claims")
 		}
 
