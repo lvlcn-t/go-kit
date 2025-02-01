@@ -3,7 +3,7 @@ module github.com/lvlcn-t/go-kit/apimanager
 go 1.23
 
 require (
-	github.com/a-h/templ v0.3.819
+	github.com/a-h/templ v0.3.833
 	github.com/coreos/go-oidc/v3 v3.12.0
 	github.com/gofiber/fiber/v3 v3.0.0-beta.4
 	github.com/google/go-cmp v0.6.0
