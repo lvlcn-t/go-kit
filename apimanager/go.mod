@@ -1,7 +1,6 @@
 module github.com/lvlcn-t/go-kit/apimanager
 
 go 1.23
-
 require (
 	github.com/a-h/templ v0.3.833
 	github.com/coreos/go-oidc/v3 v3.12.0
@@ -9,7 +8,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/lvlcn-t/loggerhead v0.3.1
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
-	golang.org/x/oauth2 v0.25.0
+	golang.org/x/oauth2 v0.27.0
 	golang.org/x/text v0.22.0
 )
 
