@@ -5,7 +5,7 @@ require (
 	github.com/a-h/templ v0.3.833
 	github.com/coreos/go-oidc/v3 v3.12.0
 	github.com/gofiber/fiber/v3 v3.0.0-beta.4
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/lvlcn-t/loggerhead v0.3.1
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	golang.org/x/oauth2 v0.27.0
