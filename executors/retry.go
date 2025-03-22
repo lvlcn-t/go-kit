@@ -40,7 +40,7 @@ func (r *Retrier) Retry(effector Effector) Effector {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case <-time.After(r.Backoff(uint(i))):
+			case <-time.After(r.Backoff(uint(i))): //nolint:gosec // overflow is not a concern here
 			}
 		}
 		return err
