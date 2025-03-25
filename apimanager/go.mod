@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.24.0
 
 require (
-	github.com/a-h/templ v0.3.850
+	github.com/a-h/templ v0.3.857
 	github.com/coreos/go-oidc/v3 v3.13.0
 	github.com/gofiber/fiber/v3 v3.0.0-beta.4
 	github.com/google/go-cmp v0.7.0
