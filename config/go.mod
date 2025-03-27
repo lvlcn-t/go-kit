@@ -7,7 +7,7 @@ toolchain go1.24.0
 require (
 	github.com/lvlcn-t/go-kit/lists v0.3.0
 	github.com/spf13/afero v1.14.0
-	github.com/spf13/viper v1.20.0
+	github.com/spf13/viper v1.20.1
 	sigs.k8s.io/yaml v1.4.0
 )
 
