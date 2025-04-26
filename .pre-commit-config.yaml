@@ -8,12 +8,13 @@ repos:
       - id: go-vet-repo-mod
       - id: go-fumpt-repo
         args: [-l, -w]
-      - id: golangci-lint-repo-mod
-        args: [--config, .golangci.yaml, --, --fix]
+      # TODO: Fix the error:
+      # Error: can't load config: can't read viper config: open .golangci.yaml: too many levels of symbolic links
+      # Failed executing command with error: can't load config: can't read viper config: open .golangci.yaml: too many levels of symbolic links
+      # - id: golangci-lint-repo-mod
+      #   args: [--config, .golangci.yaml, --, --fix]
 
-  # If this is used for business, a free license is required.
-  # It can be obtained from https://gitleaks.io/products.html
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.21.2
+    rev: v8.24.3
     hooks:
       - id: gitleaks
