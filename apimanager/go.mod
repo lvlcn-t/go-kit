@@ -5,14 +5,14 @@ go 1.24
 toolchain go1.24.2
 
 require (
-	github.com/a-h/templ v0.3.924
+	github.com/a-h/templ v0.3.943
 	github.com/coreos/go-oidc/v3 v3.14.1
 	github.com/gofiber/fiber/v3 v3.0.0-beta.4
 	github.com/google/go-cmp v0.7.0
 	github.com/lvlcn-t/loggerhead v0.3.1
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
 	golang.org/x/oauth2 v0.30.0
-	golang.org/x/text v0.26.0
+	golang.org/x/text v0.27.0
 )
 
 require (
@@ -47,7 +47,7 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
 )
