@@ -1,6 +1,6 @@
 module github.com/lvlcn-t/go-kit/apimanager
 
-go 1.24
+go 1.24.0
 
 toolchain go1.24.2
 
@@ -12,7 +12,7 @@ require (
 	github.com/lvlcn-t/loggerhead v0.3.1
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
 	golang.org/x/oauth2 v0.30.0
-	golang.org/x/text v0.28.0
+	golang.org/x/text v0.31.0
 )
 
 require (
@@ -47,7 +47,7 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
-	golang.org/x/net v0.42.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 )
