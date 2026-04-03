@@ -1,6 +1,6 @@
 module github.com/lvlcn-t/go-kit/apimanager
 
-go 1.24
+go 1.24.0
 
 toolchain go1.24.2
 
@@ -25,7 +25,7 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/gofiber/schema v1.3.0 // indirect
 	github.com/gofiber/utils/v2 v2.0.0-beta.8 // indirect
