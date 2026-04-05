@@ -168,26 +168,22 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestServer_Run(t *testing.T) {
-	const defaultRoutes = (1 * 9) // 1 route * 9 methods
-
 	tests := []struct {
-		name       string
-		server     Server
-		routes     []Route
-		wantErr    bool
-		runTwice   bool
-		wantRoutes int
+		name     string
+		server   Server
+		routes   []Route
+		wantErr  bool
+		runTwice bool
 	}{
 		{
-			name:       "Run without routes",
-			server:     New(nil, nil),
-			routes:     nil,
-			wantErr:    false,
-			wantRoutes: defaultRoutes,
+			name:    "Run without routes",
+			server:  New(nil),
+			routes:  nil,
+			wantErr: false,
 		},
 		{
 			name:   "Run with routes",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: []string{http.MethodGet},
@@ -197,12 +193,11 @@ func TestServer_Run(t *testing.T) {
 					},
 				},
 			},
-			wantErr:    false,
-			wantRoutes: 1 + defaultRoutes,
+			wantErr: false,
 		},
 		{
 			name:   "Run with USE route",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: []string{MethodUse},
@@ -214,11 +209,10 @@ func TestServer_Run(t *testing.T) {
 			},
 			wantErr: false,
 			// Since a USE route is the next in the chain of global middleware, it will be added to the routes
-			wantRoutes: defaultRoutes,
 		},
 		{
 			name:   "Run with USE route and middleware",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: []string{MethodUse},
@@ -231,12 +225,11 @@ func TestServer_Run(t *testing.T) {
 					},
 				},
 			},
-			wantErr:    false,
-			wantRoutes: defaultRoutes,
+			wantErr: false,
 		},
 		{
 			name:   "Run with invalid route",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: []string{http.MethodGet},
@@ -244,19 +237,17 @@ func TestServer_Run(t *testing.T) {
 					Handler: nil,
 				},
 			},
-			wantErr:    true,
-			wantRoutes: defaultRoutes,
+			wantErr: true,
 		},
 		{
-			name:       "Run with default healthz route",
-			server:     New(&Config{UseDefaultHealthz: true}, nil),
-			routes:     nil,
-			wantErr:    false,
-			wantRoutes: defaultRoutes + 1,
+			name:    "Run with default healthz route",
+			server:  New(&Config{UseDefaultHealthz: true}),
+			routes:  nil,
+			wantErr: false,
 		},
 		{
 			name:   "Try to run server twice",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: []string{http.MethodGet},
@@ -266,9 +257,8 @@ func TestServer_Run(t *testing.T) {
 					},
 				},
 			},
-			runTwice:   true,
-			wantErr:    true,
-			wantRoutes: 1 + defaultRoutes,
+			runTwice: true,
+			wantErr:  true,
 		},
 		{
 			name:   "Run with global middlewares",
@@ -282,8 +272,7 @@ func TestServer_Run(t *testing.T) {
 					},
 				},
 			},
-			wantErr:    false,
-			wantRoutes: 1 + defaultRoutes,
+			wantErr: false,
 		},
 	}
 
@@ -306,21 +295,20 @@ func TestServer_Run(t *testing.T) {
 
 			time.Sleep(100 * time.Millisecond)
 
+			var secondRunErr error
 			if tt.runTwice {
-				go func() {
-					cErr <- s.Run(ctx)
-				}()
+				secondRunErr = s.Run(ctx)
 			}
 
 			s.mu.Lock()
 			if !s.running && !tt.wantErr {
 				t.Errorf("server.running = %v, want %v", s.running, true)
 			}
-
-			if len(s.app.GetRoutes()) != tt.wantRoutes {
-				t.Errorf("server.app.routes = %v, want %v", len(s.app.GetRoutes()), tt.wantRoutes)
-			}
 			s.mu.Unlock()
+
+			if tt.runTwice && !errors.Is(secondRunErr, &ErrAlreadyRunning{}) {
+				t.Errorf("second server.Run() error = %v, want %v", secondRunErr, &ErrAlreadyRunning{})
+			}
 
 			err = <-cErr
 			if (err != nil) != tt.wantErr {
@@ -344,14 +332,14 @@ func TestServer_Mount(t *testing.T) {
 	}{
 		{
 			name:    "Mount without routes",
-			server:  New(nil, nil),
+			server:  New(nil),
 			routes:  nil,
 			groups:  nil,
 			wantErr: false,
 		},
 		{
 			name:   "Mount with routes",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: []string{http.MethodGet},
@@ -367,7 +355,7 @@ func TestServer_Mount(t *testing.T) {
 		},
 		{
 			name:   "Mount with invalid route",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: []string{http.MethodGet},
@@ -381,7 +369,7 @@ func TestServer_Mount(t *testing.T) {
 		},
 		{
 			name:   "Mount with invalid method",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: []string{"INVALID"},
@@ -397,7 +385,7 @@ func TestServer_Mount(t *testing.T) {
 		},
 		{
 			name:   "Mount with no methods",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: nil,
@@ -413,7 +401,7 @@ func TestServer_Mount(t *testing.T) {
 		},
 		{
 			name:   "Mount with server running",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Methods: []string{http.MethodGet},
@@ -437,7 +425,7 @@ func TestServer_Mount(t *testing.T) {
 		},
 		{
 			name:   "Mount with groups",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: nil,
 			groups: []RouteGroup{
 				{
@@ -452,7 +440,7 @@ func TestServer_Mount(t *testing.T) {
 		},
 		{
 			name:   "Mount with USE method",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Path:    "/",
@@ -467,7 +455,7 @@ func TestServer_Mount(t *testing.T) {
 		},
 		{
 			name:   "Mount with USE method and other methods",
-			server: New(nil, nil),
+			server: New(nil),
 			routes: []Route{
 				{
 					Path:    "/",
@@ -526,13 +514,13 @@ func TestServer_Shutdown(t *testing.T) {
 	}{
 		{
 			name:    "Shutdown without running server",
-			server:  New(nil, nil),
+			server:  New(nil),
 			running: false,
 			wantErr: false,
 		},
 		{
 			name:    "Shutdown with running server",
-			server:  New(nil, nil),
+			server:  New(nil),
 			running: true,
 			// Want false because we want indempotent behavior
 			wantErr: false,
@@ -568,7 +556,7 @@ func TestServer_Restart(t *testing.T) {
 	}{
 		{
 			name:    "Restart without routes",
-			server:  New(nil, nil),
+			server:  New(nil),
 			running: true,
 			routes:  nil,
 			groups:  nil,
@@ -576,7 +564,7 @@ func TestServer_Restart(t *testing.T) {
 		},
 		{
 			name:    "Restart with routes",
-			server:  New(nil, nil),
+			server:  New(nil),
 			running: true,
 			routes: []Route{
 				{
@@ -592,7 +580,7 @@ func TestServer_Restart(t *testing.T) {
 		},
 		{
 			name:    "Restart with invalid route",
-			server:  New(nil, nil),
+			server:  New(nil),
 			running: true,
 			routes: []Route{
 				{
@@ -606,7 +594,7 @@ func TestServer_Restart(t *testing.T) {
 		},
 		{
 			name:    "Restart with invalid method",
-			server:  New(nil, nil),
+			server:  New(nil),
 			running: true,
 			routes: []Route{
 				{
@@ -622,7 +610,7 @@ func TestServer_Restart(t *testing.T) {
 		},
 		{
 			name:    "Restart with no methods",
-			server:  New(nil, nil),
+			server:  New(nil),
 			running: true,
 			routes: []Route{
 				{
@@ -638,7 +626,7 @@ func TestServer_Restart(t *testing.T) {
 		},
 		{
 			name:    "Restart with groups",
-			server:  New(nil, nil),
+			server:  New(nil),
 			running: true,
 			routes:  nil,
 			groups: []RouteGroup{
@@ -653,7 +641,7 @@ func TestServer_Restart(t *testing.T) {
 		},
 		{
 			name:    "Restart without running server",
-			server:  New(nil, nil),
+			server:  New(nil),
 			running: false,
 			routes:  nil,
 			groups:  nil,

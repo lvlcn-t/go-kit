@@ -207,7 +207,7 @@ func (s *server) Mount(routes ...Route) error {
 				break
 			}
 
-			if !isMethodValid(strings.ToUpper(method)) {
+			if !isMethodValid(method) {
 				return fmt.Errorf("route %q has invalid method %q", routes[i].Path, method)
 			}
 		}
@@ -252,13 +252,9 @@ func (s *server) attachRoutes(ctx context.Context) (err error) {
 	// injected into the context if not already present.
 	_ = s.router.Use(middleware.Context(logger.IntoContext(ctx, logger.FromContext(ctx))))
 
-	// To be able to use the [fiber.Router]'s Use method, it's necessary to convert the middlewares to a slice of any.
-	// Unfortunately, the compiler does not allow implicit conversion from []fiber.Handler to []any.
-	middlewares := make([]any, len(s.middlewares))
 	for i := range s.middlewares {
-		middlewares[i] = s.middlewares[i]
+		_ = s.router.Use(s.middlewares[i])
 	}
-	_ = s.router.Use(middlewares...)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -282,7 +278,7 @@ func (s *server) attachRoutes(ctx context.Context) (err error) {
 
 	for _, route := range s.routes {
 		logger.FromContext(ctx).InfoContext(ctx, "Mounting route", "path", route.Path, "methods", strings.Join(route.Methods, ","))
-		_ = s.router.Add(route.Methods, route.Path, route.Handler, route.Middlewares...)
+		_ = s.router.Add(route.Methods, route.Path, route.Handler, route.middlewares()...)
 	}
 
 	s.running = true

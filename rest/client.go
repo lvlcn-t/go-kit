@@ -233,7 +233,7 @@ func (r *restClient) do(ctx context.Context, endpoint *Endpoint, payload, respon
 
 	r.wg.Add(1)
 	defer r.wg.Done()
-	resp, err := r.client.Do(request.Http)
+	resp, err := r.client.Do(request.Http) // #nosec G704 // URL is controlled by the caller and should be validated before being passed to the client.
 	if err != nil {
 		return 0, fmt.Errorf("failed to make request: %w", err)
 	}

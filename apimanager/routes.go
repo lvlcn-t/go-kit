@@ -2,6 +2,8 @@ package apimanager
 
 import (
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -83,6 +85,14 @@ func Use(path string, handler fiber.Handler, middlewares ...fiber.Handler) Route
 	}
 }
 
+func (r Route) middlewares() []any {
+	middlewares := make([]any, len(r.Middlewares))
+	for i := range r.Middlewares {
+		middlewares[i] = r.Middlewares[i]
+	}
+	return middlewares
+}
+
 // RouteGroup is a route to register a sub-app to.
 type RouteGroup struct {
 	// Path is the Path of the route.
@@ -96,21 +106,22 @@ func NewRouteGroup(path string, app fiber.Router) RouteGroup {
 	return RouteGroup{Path: path, App: app}
 }
 
+// allHTTPMethods is a list of all valid HTTP methods.
+var allHTTPMethods = []string{
+	http.MethodGet,
+	http.MethodHead,
+	http.MethodPost,
+	http.MethodPut,
+	http.MethodPatch,
+	http.MethodDelete,
+	http.MethodConnect,
+	http.MethodOptions,
+	http.MethodTrace,
+}
+
 // isMethodValid checks if the provided method is a valid HTTP method.
 func isMethodValid(method string) bool {
-	switch method {
-	case
-		http.MethodGet,
-		http.MethodHead,
-		http.MethodPost,
-		http.MethodPut,
-		http.MethodPatch,
-		http.MethodDelete,
-		http.MethodConnect,
-		http.MethodOptions,
-		http.MethodTrace:
-		return true
-	default:
-		return false
-	}
+	return slices.ContainsFunc(allHTTPMethods, func(m string) bool {
+		return strings.EqualFold(m, method)
+	})
 }

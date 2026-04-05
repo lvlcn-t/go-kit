@@ -438,7 +438,7 @@ func TestClient_Close(t *testing.T) {
 						t.Errorf("Failed to create request: %v", err)
 					}
 
-					resp, err := c.client.Do(req)
+					resp, err := c.client.Do(req) // #nosec G704 // irrelevant for tests
 					if err != nil {
 						t.Errorf("Failed to make request: %v", err)
 					}

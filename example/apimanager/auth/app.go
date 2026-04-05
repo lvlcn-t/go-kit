@@ -108,7 +108,7 @@ func sendRequestFromClient(ctx context.Context) error {
 }
 
 type Token struct {
-	AccessToken string `json:"access_token"`
+	AccessToken string `json:"access_token"` // #nosec G117 // Just an example
 	TokenType   string `json:"token_type"`
 	ExpiresIn   int    `json:"expires_in"`
 }
@@ -175,7 +175,7 @@ func requestServer(ctx context.Context, tk *Token) error {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tk.AccessToken))
 
 	// Send the request to the server
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req) // #nosec G704 // Just an example, in real scenarios, you should validate the URL.
 	if err != nil {
 		log.ErrorContext(ctx, "Failed to send request", err)
 		return err

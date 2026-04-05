@@ -18,7 +18,7 @@ func main() {
 			return err
 		}
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := http.DefaultClient.Do(req) // #nosec G704 // Just an example, in real scenarios, you should validate the URL.
 		if err != nil {
 			return err
 		}

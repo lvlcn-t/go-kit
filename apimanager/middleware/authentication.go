@@ -28,7 +28,7 @@ type AuthConfig struct {
 	// ProviderURL is the URL of the OIDC provider.
 	ProviderURL string
 	// ClientSecret is the client secret used to authenticate with the OIDC provider.
-	ClientSecret string
+	ClientSecret string // #nosec G117 // Field is required for OIDC authentication.
 	// RedirectURL is the URL to redirect to after authentication.
 	RedirectURL string
 	// Scopes are the scopes to request during authentication.

@@ -90,7 +90,7 @@ type variable[T any] struct {
 //	value, err := env.Get[bool]("MY_VAR").NoFallback().Value()
 func Get[T any](key string) Variable[T] {
 	t := reflect.TypeFor[T]()
-	if t != nil && t.Kind() == reflect.Pointer {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 
