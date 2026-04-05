@@ -1,6 +1,6 @@
 module github.com/lvlcn-t/go-kit/rest
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/jarcoal/httpmock v1.4.0

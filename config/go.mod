@@ -1,6 +1,6 @@
 module github.com/lvlcn-t/go-kit/config
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/lvlcn-t/go-kit/lists v0.3.0
