@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/a-h/templ v0.3.1001
-	github.com/coreos/go-oidc/v3 v3.17.0
+	github.com/coreos/go-oidc/v3 v3.18.0
 	github.com/gofiber/fiber/v3 v3.1.0
 	github.com/google/go-cmp v0.7.0
 	github.com/lvlcn-t/loggerhead v0.3.1
